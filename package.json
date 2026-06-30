@@ -39,6 +39,7 @@
     "build:editor": "vite build --config vite.editor.config.ts",
     "build:viewer": "vite build --config vite.viewer.config.ts",
     "build": "npm run build:adapter && npm run build:editor && npm run build:viewer",
+    "prepare": "npm run build",
     "dev:editor": "vite --config vite.editor.config.ts --host 127.0.0.1",
     "dev:viewer": "vite --config vite.viewer.config.ts --host 127.0.0.1",
     "test": "vitest run",
