@@ -45,7 +45,7 @@
     "lint": "eslint . && tsc -p tsconfig.adapter.json --noEmit && tsc -p tsconfig.frontend.json --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "adapter:check": "npx @iobroker/repochecker"
+    "adapter:check": "npx @iobroker/repochecker dude2k/ioBroker.nb-dashboard"
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.3.1",
