@@ -29,12 +29,10 @@ npm install
 npm run build
 ```
 
-For a first ioBroker test installation from GitHub, pass the adapter name
-explicitly because the repository is named `ioBroker.ng-dashboard` while the
-adapter package is `iobroker.dashboard-ng`:
+For a first ioBroker test installation from GitHub:
 
 ```bash
-iobroker url https://github.com/dude2k/ioBroker.ng-dashboard dashboard-ng
+iobroker url https://github.com/dude2k/ioBroker.dashboard-ng
 ```
 
 For an ioBroker development instance, install the adapter from the repository
