@@ -9,13 +9,13 @@
     "smart-home",
     "adapter"
   ],
-  "homepage": "https://github.com/dude2k/ioBroker.nb-dashboard#readme",
+  "homepage": "https://github.com/dude2k/ioBroker.ng-dashboard#readme",
   "bugs": {
-    "url": "https://github.com/dude2k/ioBroker.nb-dashboard/issues"
+    "url": "https://github.com/dude2k/ioBroker.ng-dashboard/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/dude2k/ioBroker.nb-dashboard.git"
+    "url": "https://github.com/dude2k/ioBroker.ng-dashboard.git"
   },
   "license": "MIT",
   "author": "ioBroker Dashboard-NG contributors",
@@ -46,7 +46,7 @@
     "lint": "eslint . && tsc -p tsconfig.adapter.json --noEmit && tsc -p tsconfig.frontend.json --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "adapter:check": "npx @iobroker/repochecker dude2k/ioBroker.nb-dashboard"
+    "adapter:check": "npx @iobroker/repochecker dude2k/ioBroker.ng-dashboard"
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.3.1",
