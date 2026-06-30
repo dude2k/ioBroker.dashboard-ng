@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true,
+    "types": ["vite/client", "node"]
+  },
+  "include": [
+    "packages/shared/src/**/*.ts",
+    "packages/editor/src/**/*.ts",
+    "packages/editor/src/**/*.tsx",
+    "packages/viewer/src/**/*.ts",
+    "packages/viewer/src/**/*.tsx",
+    "vite.*.config.ts",
+    "vitest.config.ts"
+  ]
+}

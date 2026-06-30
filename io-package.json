@@ -1,0 +1,92 @@
+{
+  "common": {
+    "name": "dashboard-ng",
+    "version": "0.1.0",
+    "news": {
+      "0.1.0": {
+        "en": "Initial MVP foundation with editor, viewer, schema, migrations and storage.",
+        "de": "Erste MVP-Grundlage mit Editor, Viewer, Schema, Migrationen und Speicherung."
+      }
+    },
+    "title": "ioBroker Dashboard-NG",
+    "titleLang": {
+      "en": "ioBroker Dashboard-NG",
+      "de": "ioBroker Dashboard-NG"
+    },
+    "desc": {
+      "en": "Modern responsive dashboard builder and viewer for ioBroker.",
+      "de": "Moderner responsiver Dashboard-Builder und Viewer fuer ioBroker."
+    },
+    "authors": ["ioBroker Dashboard-NG contributors"],
+    "keywords": ["dashboard", "visualization", "smart-home", "kiosk", "tablet"],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "build/src/main.js",
+    "icon": "dashboard-ng.svg",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/dude2k/ioBroker.nb-dashboard/main/admin/dashboard-ng.svg",
+    "readme": "https://github.com/dude2k/ioBroker.nb-dashboard/blob/main/README.md",
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "visualization",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "materialize": true,
+    "adminUI": {
+      "config": "materialize"
+    },
+    "www": true,
+    "localLinks": {
+      "_default": "%web_protocol%://%ip%:%web_port%/adapter/dashboard-ng/index.html"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.0"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=6.0.0"
+      },
+      {
+        "web": ">=6.0.0"
+      }
+    ]
+  },
+  "native": {
+    "defaultDashboardId": "default",
+    "enableKioskMode": true,
+    "enableWakeLock": true,
+    "enableBurnInProtection": true
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Adapter connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.lastDashboardSave",
+      "type": "state",
+      "common": {
+        "role": "date",
+        "name": "Last dashboard save",
+        "type": "number",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "lib": ["ES2022"],
+    "rootDir": ".",
+    "outDir": "build",
+    "declaration": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "packages/shared/src/**/*.ts"],
+  "exclude": ["packages/**/*.tsx", "packages/editor", "packages/viewer", "test", "node_modules"]
+}
