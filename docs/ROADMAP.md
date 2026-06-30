@@ -18,6 +18,9 @@
 - README in German and English.
 - Docs, ADR, tests, linting and build scripts.
 
+Detailed remaining MVP implementation tasks are tracked in
+`docs/MVP_COMPLETION_TASK.md`.
+
 ## Post-MVP
 
 - Room Card.
