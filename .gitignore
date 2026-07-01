@@ -13,6 +13,7 @@ pnpm-debug.log*
 .env.*
 !.env.example
 admin/assets/
+admin/index.html
 admin/index_m.html
 www/
 .ai/

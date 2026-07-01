@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "news": {
+      "0.2.2": {
+        "en": "Added a compatibility redirect for the old /adapter/dashboard-ng/index.html URL.",
+        "de": "Kompatibilitaets-Redirect fuer die alte URL /adapter/dashboard-ng/index.html hinzugefuegt.",
+        "ru": "Dobavlen redirect sovmestimosti dlya starogo URL /adapter/dashboard-ng/index.html.",
+        "pt": "Adicionado redirect de compatibilidade para a URL antiga /adapter/dashboard-ng/index.html.",
+        "nl": "Compatibiliteitsredirect toegevoegd voor de oude URL /adapter/dashboard-ng/index.html.",
+        "fr": "Redirection de compatibilite ajoutee pour l'ancienne URL /adapter/dashboard-ng/index.html.",
+        "it": "Redirect di compatibilita aggiunto per il vecchio URL /adapter/dashboard-ng/index.html.",
+        "es": "Redirect de compatibilidad agregado para la URL antigua /adapter/dashboard-ng/index.html.",
+        "pl": "Dodano redirect zgodnosci dla starego URL /adapter/dashboard-ng/index.html.",
+        "uk": "Dodano redirect sumisnosti dlya starogo URL /adapter/dashboard-ng/index.html.",
+        "zh-cn": "Compatibility redirect added for the old /adapter/dashboard-ng/index.html URL."
+      },
       "0.2.1": {
         "en": "Corrected the Viewer web link so ioBroker web opens the dashboard-ng file namespace.",
         "de": "Viewer-Web-Link korrigiert, damit ioBroker web den dashboard-ng-Dateibereich oeffnet.",
