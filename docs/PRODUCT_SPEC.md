@@ -50,15 +50,16 @@ runtime behavior.
 ## Operation Concept
 
 The user starts in the Editor, adds components from the palette, places them on
-the grid with a snapped drop preview, binds states in the inspector and
-immediately sees a live preview.
+the grid with a snapped drop preview, adjusts position and size through handles,
+binds states in the inspector and immediately sees a live preview.
 Advanced Mode can expose more precise settings, but the default workflow must
 stay simple.
 
 ## Editor Concept
 
 - Left palette: components and templates.
-- Center: page tabs and responsive grid canvas with snap-to-grid.
+- Center: page tabs and responsive grid canvas with snap-to-grid, move handles
+  and resize handles.
 - Right inspector: selected component, bindings, actions, visibility and style.
 - Top bar: save, import/export, undo/redo, copy/paste, theme, preview size and
   Edit/View switch.

@@ -73,7 +73,8 @@ root once build output exists.
 
 The Editor contains a component palette, page management, responsive grid
 canvas, state picker and property inspector. Palette cards can be dragged onto
-the canvas with a snapped drop preview based on the component default size. It
+the canvas with a snapped drop preview based on the component default size.
+Selected cards can be moved and resized on the grid through editor handles. It
 supports undo/redo, copy/paste, import/export and preview sizes for phone,
 tablet, desktop and wall panel.
 
@@ -163,6 +164,8 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 
 - Improved editor palette drag/drop with snapped grid drop preview and
   catalog-based default component sizes.
+- Added snapped editor move/resize handles with local layout preview before
+  committing changes.
 
 ### 0.2.2 (2026-07-01)
 

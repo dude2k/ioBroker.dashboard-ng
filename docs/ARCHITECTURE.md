@@ -41,7 +41,8 @@ The Editor is a React/Vite app. It provides:
 - Component palette.
 - Page management for creating, renaming, duplicating, deleting and switching
   dashboard pages.
-- Grid canvas with snap-to-grid.
+- Grid canvas with snap-to-grid, palette drop preview and local move/resize
+  preview before committing layout changes.
 - Property inspector.
 - State picker.
 - Undo/redo, copy/paste and import/export.

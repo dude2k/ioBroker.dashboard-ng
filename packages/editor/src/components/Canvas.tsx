@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Copy, Grip, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Grip,
+  MoveDiagonal2,
+  MoveHorizontal,
+  MoveVertical,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import type { DashboardComponent, GridPlacement } from "@dashboard-ng/shared";
 import {
   DashboardRuntimeCard,
@@ -12,9 +21,23 @@ import {
 import { getActivePage, getComponentBinding, useEditorStore } from "../store/editorStore";
 import { dashboardClient } from "../lib/client";
 import { getCatalogDropPlacement, readComponentDragType } from "../lib/dragDrop";
+import {
+  getPointerGridDelta,
+  moveGridPlacement,
+  placementsEqual,
+  resizeGridPlacement,
+  type ResizeHandle,
+} from "../lib/layoutInteraction";
+
+interface LayoutDraft {
+  componentId: string;
+  kind: "move" | "resize";
+  placement: GridPlacement;
+}
 
 export function Canvas() {
   const [dropPreview, setDropPreview] = useState<GridPlacement>();
+  const [layoutDraft, setLayoutDraft] = useState<LayoutDraft>();
   const project = useEditorStore((state) => state.project);
   const preview = useEditorStore((state) => state.preview);
   const selectedIds = useEditorStore((state) => state.selectedIds);
@@ -41,6 +64,7 @@ export function Canvas() {
   const contentBottom = Math.max(
     getGridBottom(components, preview),
     dropPreview ? dropPreview.y + dropPreview.h : 0,
+    layoutDraft ? layoutDraft.placement.y + layoutDraft.placement.h : 0,
   );
   const height = Math.max(520, (contentBottom + 2) * cell);
 
@@ -158,10 +182,13 @@ export function Canvas() {
           />
         ) : null}
         {components.map((component) => {
-          const placement = clampGridPlacement(
+          const storedPlacement = clampGridPlacement(
             resolveComponentPlacement(component, preview),
             columns,
           );
+          const activeDraft =
+            layoutDraft?.componentId === component.componentId ? layoutDraft : undefined;
+          const placement = activeDraft?.placement ?? storedPlacement;
           const binding = getComponentBinding(project, component);
           return (
             <ComponentTile
@@ -171,12 +198,37 @@ export function Canvas() {
               )}
               component={component}
               actions={project.actions.filter((item) => item.componentId === component.componentId)}
+              isMoving={activeDraft?.kind === "move"}
+              isResizing={activeDraft?.kind === "resize"}
               isSelected={selectedIds.includes(component.componentId)}
               key={component.componentId}
-              onPointerDown={(event) => {
-                event.stopPropagation();
+              onSelect={(additive) => selectComponent(component.componentId, additive)}
+              onStartMove={(event) => {
                 selectComponent(component.componentId, event.shiftKey);
-                startDrag(event, component, placement, cell, columns, moveComponent);
+                startLayoutInteraction(event, {
+                  columns,
+                  componentId: component.componentId,
+                  kind: "move",
+                  cell,
+                  startPlacement: storedPlacement,
+                  setLayoutDraft,
+                  commitPlacement: (nextPlacement) =>
+                    moveComponent(component.componentId, nextPlacement, preview),
+                });
+              }}
+              onStartResize={(event, handle) => {
+                selectComponent(component.componentId, event.shiftKey);
+                startLayoutInteraction(event, {
+                  columns,
+                  componentId: component.componentId,
+                  kind: "resize",
+                  resizeHandle: handle,
+                  cell,
+                  startPlacement: storedPlacement,
+                  setLayoutDraft,
+                  commitPlacement: (nextPlacement) =>
+                    moveComponent(component.componentId, nextPlacement, preview),
+                });
               }}
               placement={placement}
               stateValues={stateValues}
@@ -192,36 +244,58 @@ interface ComponentTileProps {
   component: DashboardComponent;
   placement: GridPlacement;
   isSelected: boolean;
+  isMoving: boolean;
+  isResizing: boolean;
   bindingMissing: boolean;
   bindings: ReturnType<typeof useEditorStore.getState>["project"]["bindings"];
   actions: ReturnType<typeof useEditorStore.getState>["project"]["actions"];
   stateValues: ReturnType<typeof useEditorStore.getState>["stateValues"];
-  onPointerDown(event: React.PointerEvent<HTMLDivElement>): void;
+  onSelect(additive: boolean): void;
+  onStartMove(event: React.PointerEvent<HTMLButtonElement>): void;
+  onStartResize(event: React.PointerEvent<HTMLButtonElement>, handle: ResizeHandle): void;
 }
 
 function ComponentTile({
   component,
   placement,
   isSelected,
+  isMoving,
+  isResizing,
   bindingMissing,
   bindings,
   actions,
   stateValues,
-  onPointerDown,
+  onSelect,
+  onStartMove,
+  onStartResize,
 }: ComponentTileProps) {
   const setStateValues = useEditorStore((state) => state.setStateValues);
   return (
     <div
-      className={`component-tile ${isSelected ? "is-selected" : ""} ${bindingMissing ? "has-missing" : ""}`}
+      className={`component-tile ${isSelected ? "is-selected" : ""} ${isMoving ? "is-moving" : ""} ${isResizing ? "is-resizing" : ""} ${bindingMissing ? "has-missing" : ""}`}
       style={{
         gridColumn: `${placement.x + 1} / span ${placement.w}`,
         gridRow: `${placement.y + 1} / span ${placement.h}`,
       }}
-      onPointerDown={onPointerDown}
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => {
+        if (event.button !== 0) {
+          return;
+        }
+        event.stopPropagation();
+        onSelect(event.shiftKey);
+      }}
     >
-      <div className="tile-grip">
+      <button
+        aria-label="Move component"
+        className="tile-grip"
+        title="Move component"
+        type="button"
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={onStartMove}
+      >
         <Grip size={14} aria-hidden="true" />
-      </div>
+      </button>
       <DashboardRuntimeCard
         actions={actions}
         bindings={bindings}
@@ -235,40 +309,115 @@ function ComponentTile({
           await dashboardClient.writeState(stateId, value);
         }}
       />
+      {isSelected ? (
+        <>
+          <ResizeHandleButton handle="east" onStartResize={onStartResize} />
+          <ResizeHandleButton handle="south" onStartResize={onStartResize} />
+          <ResizeHandleButton handle="south-east" onStartResize={onStartResize} />
+        </>
+      ) : null}
     </div>
   );
 }
 
-function startDrag(
-  event: React.PointerEvent<HTMLDivElement>,
-  component: DashboardComponent,
-  placement: GridPlacement,
-  cell: number,
-  columns: number,
-  moveComponent: (componentId: string, placement: GridPlacement) => void,
-): void {
-  const startX = event.clientX;
-  const startY = event.clientY;
+function ResizeHandleButton({
+  handle,
+  onStartResize,
+}: {
+  handle: ResizeHandle;
+  onStartResize(event: React.PointerEvent<HTMLButtonElement>, handle: ResizeHandle): void;
+}) {
+  const title =
+    handle === "east"
+      ? "Resize width"
+      : handle === "south"
+        ? "Resize height"
+        : "Resize width and height";
+  const Icon =
+    handle === "east" ? MoveHorizontal : handle === "south" ? MoveVertical : MoveDiagonal2;
 
-  function onMove(moveEvent: PointerEvent) {
-    const deltaX = Math.round((moveEvent.clientX - startX) / cell);
-    const deltaY = Math.round((moveEvent.clientY - startY) / cell);
-    moveComponent(
-      component.componentId,
-      clampGridPlacement(
-        {
-          ...placement,
-          x: placement.x + deltaX,
-          y: placement.y + deltaY,
-        },
-        columns,
-      ),
-    );
+  return (
+    <button
+      aria-label={title}
+      className={`resize-handle handle-${handle}`}
+      title={title}
+      type="button"
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => onStartResize(event, handle)}
+    >
+      <Icon size={12} aria-hidden="true" />
+    </button>
+  );
+}
+
+interface LayoutInteractionOptions {
+  componentId: string;
+  kind: LayoutDraft["kind"];
+  resizeHandle?: ResizeHandle | undefined;
+  startPlacement: GridPlacement;
+  cell: number;
+  columns: number;
+  setLayoutDraft(draft: LayoutDraft | undefined): void;
+  commitPlacement(placement: GridPlacement): void;
+}
+
+function startLayoutInteraction(
+  event: React.PointerEvent<HTMLButtonElement>,
+  options: LayoutInteractionOptions,
+): void {
+  if (event.button !== 0) {
+    return;
   }
 
-  function onUp() {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const initialDraft: LayoutDraft = {
+    componentId: options.componentId,
+    kind: options.kind,
+    placement: options.startPlacement,
+  };
+
+  options.setLayoutDraft(initialDraft);
+
+  function nextPlacement(currentClientX: number, currentClientY: number): GridPlacement {
+    const delta = getPointerGridDelta({
+      startClientX: startX,
+      startClientY: startY,
+      currentClientX,
+      currentClientY,
+      cell: options.cell,
+    });
+
+    if (options.kind === "resize" && options.resizeHandle) {
+      return resizeGridPlacement(
+        options.startPlacement,
+        options.resizeHandle,
+        delta,
+        options.columns,
+      );
+    }
+
+    return moveGridPlacement(options.startPlacement, delta, options.columns);
+  }
+
+  function onMove(moveEvent: PointerEvent) {
+    options.setLayoutDraft({
+      ...initialDraft,
+      placement: nextPlacement(moveEvent.clientX, moveEvent.clientY),
+    });
+  }
+
+  function onUp(upEvent: PointerEvent) {
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    const placement = nextPlacement(upEvent.clientX, upEvent.clientY);
+    options.setLayoutDraft(undefined);
+    if (!placementsEqual(options.startPlacement, placement)) {
+      options.commitPlacement(placement);
+    }
   }
 
   window.addEventListener("pointermove", onMove);

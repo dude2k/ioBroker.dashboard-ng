@@ -337,6 +337,11 @@ button {
   min-height: 0;
 }
 
+.component-tile.is-moving,
+.component-tile.is-resizing {
+  z-index: 4;
+}
+
 .component-tile.is-selected::after {
   content: "";
   pointer-events: none;
@@ -350,12 +355,69 @@ button {
   border-color: var(--warn);
 }
 
-.tile-grip {
+.tile-grip,
+.resize-handle {
   position: absolute;
+  z-index: 3;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+  opacity: 0.92;
+  touch-action: none;
+}
+
+.tile-grip {
   top: 10px;
   right: 10px;
-  z-index: 2;
-  color: var(--muted);
+  cursor: grab;
+}
+
+.tile-grip:hover,
+.resize-handle:hover,
+.component-tile.is-moving .tile-grip,
+.component-tile.is-resizing .resize-handle {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.tile-grip:active {
+  cursor: grabbing;
+}
+
+.resize-handle {
+  opacity: 0;
+}
+
+.component-tile.is-selected .resize-handle,
+.component-tile:hover .resize-handle,
+.component-tile.is-resizing .resize-handle {
+  opacity: 0.92;
+}
+
+.resize-handle.handle-east {
+  top: 50%;
+  right: -5px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.resize-handle.handle-south {
+  left: 50%;
+  bottom: -5px;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.resize-handle.handle-south-east {
+  right: -5px;
+  bottom: -5px;
+  cursor: nwse-resize;
 }
 
 .field {
