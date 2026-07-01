@@ -71,9 +71,9 @@ root once build output exists.
 
 ## Editor
 
-The Editor contains a component palette, responsive grid canvas, state picker and
-property inspector. It supports undo/redo, copy/paste, import/export and preview
-sizes for phone, tablet, desktop and wall panel.
+The Editor contains a component palette, page management, responsive grid
+canvas, state picker and property inspector. It supports undo/redo, copy/paste,
+import/export and preview sizes for phone, tablet, desktop and wall panel.
 
 ## Viewer
 
