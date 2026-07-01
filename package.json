@@ -22,7 +22,7 @@
   "main": "build/src/main.js",
   "types": "build/src/main.d.ts",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "files": [
     "admin",
@@ -43,13 +43,15 @@
     "dev:editor": "vite --config vite.editor.config.ts --host 127.0.0.1",
     "dev:viewer": "vite --config vite.viewer.config.ts --host 127.0.0.1",
     "test": "vitest run",
+    "test:package": "mocha test/package --exit",
+    "test:integration": "mocha test/integration --exit",
     "lint": "eslint . && tsc -p tsconfig.adapter.json --noEmit && tsc -p tsconfig.frontend.json --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "adapter:check": "npx @iobroker/repochecker dude2k/ioBroker.dashboard-ng"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^3.3.1",
+    "@iobroker/adapter-core": "^3.4.1",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -57,6 +59,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@iobroker/testing": "^5.2.2",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",

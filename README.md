@@ -2,6 +2,24 @@
 
 Modern responsive dashboards for ioBroker.
 
+## Project Status
+
+**Dashboard-NG is not finished yet.** Version `0.1.0` is an installable alpha
+baseline for early testing and development. The adapter can be installed from
+GitHub and an instance can run, but the complete MVP feature set from
+`docs/MVP_COMPLETION_TASK.md` is still in progress.
+
+Do not treat this project as production-ready. Expect missing features, schema
+changes and possible breaking changes before a stable `1.0.0` release.
+
+## Version
+
+- Current adapter version: `0.1.0`
+- Current GitHub tag: `v0.1.0`
+- Release status: alpha / installable MVP foundation
+- Versioning scheme: SemVer-style package versions and Git tags named
+  `vX.Y.Z`
+
 Dashboard-NG is an ioBroker adapter with a dedicated Editor and Viewer. It helps
 normal users build polished Smart Home dashboards without writing HTML, CSS or
 JavaScript.
@@ -22,7 +40,7 @@ JavaScript.
 
 ## Installation
 
-This project is currently an MVP foundation. For development:
+This project is currently an unfinished alpha/MVP foundation. For development:
 
 ```bash
 npm install
@@ -34,6 +52,9 @@ For a first ioBroker test installation from GitHub:
 ```bash
 iobroker url https://github.com/dude2k/ioBroker.dashboard-ng
 ```
+
+This installation method is intended for testing the current alpha state. The
+adapter is not yet released through npm or the official ioBroker repositories.
 
 For an ioBroker development instance, install the adapter from the repository
 root once build output exists.
@@ -127,6 +148,17 @@ Editor and `www/` for the Viewer. It is prepared for ioBroker adapter checks,
 but the MVP still needs validation in real ioBroker installations before a
 stable release.
 
+## Changelog
+
+### 0.1.0 (2026-07-01)
+
+- First installable GitHub alpha baseline.
+- Added TypeScript adapter backend, Editor bundle and Viewer bundle.
+- Added dashboard schema, migrations, storage, import/export foundation and
+  initial tests.
+- Added first implemented components: Light Card, Sensor Card and Scene Button.
+- Added project documentation and remaining MVP completion task list.
+
 ## Known MVP Limits
 
 - Only Light Card, Sensor Card and Scene Button are implemented first.
@@ -142,6 +174,12 @@ Dashboards. Nutzer sollen ohne HTML, CSS oder JavaScript schoene Dashboards
 erstellen koennen. Der MVP konzentriert sich auf Editor, Viewer, Grid-Layout,
 State-Binding, sichere Formeln, Import/Export, Themes und stabile Migrationen.
 
+Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.1.0` ist eine
+installierbare Alpha-Grundlage fuer Tests und Weiterentwicklung, aber noch keine
+stabile Produktivversion.
+
 ## License
 
 MIT
+
+Copyright (c) 2026 ioBroker Dashboard-NG contributors

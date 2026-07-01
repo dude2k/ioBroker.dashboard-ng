@@ -5,23 +5,51 @@
     "news": {
       "0.1.0": {
         "en": "Initial MVP foundation with editor, viewer, schema, migrations and storage.",
-        "de": "Erste MVP-Grundlage mit Editor, Viewer, Schema, Migrationen und Speicherung."
+        "de": "Erste MVP-Grundlage mit Editor, Viewer, Schema, Migrationen und Speicherung.",
+        "ru": "Начальная основа MVP с редактором, просмотрщиком, схемой, миграциями и хранением.",
+        "pt": "Base inicial do MVP com editor, visualizador, esquema, migracoes e armazenamento.",
+        "nl": "Eerste MVP-basis met editor, viewer, schema, migraties en opslag.",
+        "fr": "Base MVP initiale avec editeur, visionneuse, schema, migrations et stockage.",
+        "it": "Base MVP iniziale con editor, visualizzatore, schema, migrazioni e archiviazione.",
+        "es": "Base MVP inicial con editor, visor, esquema, migraciones y almacenamiento.",
+        "pl": "Poczatkowa baza MVP z edytorem, widokiem, schematem, migracjami i zapisem.",
+        "uk": "Початкова основа MVP з редактором, переглядачем, схемою, міграціями та зберіганням.",
+        "zh-cn": "带有编辑器、查看器、架构、迁移和存储的初始 MVP 基础。"
       }
     },
-    "title": "ioBroker Dashboard-NG",
     "titleLang": {
-      "en": "ioBroker Dashboard-NG",
-      "de": "ioBroker Dashboard-NG"
+      "en": "Dashboard-NG",
+      "de": "Dashboard-NG",
+      "ru": "Dashboard-NG",
+      "pt": "Dashboard-NG",
+      "nl": "Dashboard-NG",
+      "fr": "Dashboard-NG",
+      "it": "Dashboard-NG",
+      "es": "Dashboard-NG",
+      "pl": "Dashboard-NG",
+      "uk": "Dashboard-NG",
+      "zh-cn": "Dashboard-NG"
     },
     "desc": {
       "en": "Modern responsive dashboard builder and viewer for ioBroker.",
-      "de": "Moderner responsiver Dashboard-Builder und Viewer fuer ioBroker."
+      "de": "Moderner responsiver Dashboard-Builder und Viewer fuer ioBroker.",
+      "ru": "Modern responsive dashboard builder and viewer for ioBroker.",
+      "pt": "Modern responsive dashboard builder and viewer for ioBroker.",
+      "nl": "Modern responsive dashboard builder and viewer for ioBroker.",
+      "fr": "Modern responsive dashboard builder and viewer for ioBroker.",
+      "it": "Modern responsive dashboard builder and viewer for ioBroker.",
+      "es": "Modern responsive dashboard builder and viewer for ioBroker.",
+      "pl": "Modern responsive dashboard builder and viewer for ioBroker.",
+      "uk": "Modern responsive dashboard builder and viewer for ioBroker.",
+      "zh-cn": "Modern responsive dashboard builder and viewer for ioBroker."
     },
     "authors": ["ioBroker Dashboard-NG contributors"],
     "keywords": ["dashboard", "visualization", "smart-home", "kiosk", "tablet"],
-    "license": "MIT",
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
     "platform": "Javascript/Node.js",
-    "main": "build/src/main.js",
     "icon": "dashboard-ng.svg",
     "enabled": true,
     "extIcon": "https://raw.githubusercontent.com/dude2k/ioBroker.dashboard-ng/main/admin/dashboard-ng.svg",
@@ -29,25 +57,24 @@
     "loglevel": "info",
     "mode": "daemon",
     "type": "visualization",
+    "tier": 3,
     "compact": true,
     "connectionType": "local",
     "dataSource": "push",
-    "materialize": true,
     "adminUI": {
       "config": "materialize"
     },
-    "www": true,
     "localLinks": {
       "_default": "%web_protocol%://%ip%:%web_port%/adapter/dashboard-ng/index.html"
     },
     "dependencies": [
       {
-        "js-controller": ">=5.0.0"
+        "js-controller": ">=6.0.11"
       }
     ],
     "globalDependencies": [
       {
-        "admin": ">=6.0.0"
+        "admin": ">=7.6.20"
       },
       {
         "web": ">=6.0.0"

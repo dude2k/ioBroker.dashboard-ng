@@ -4,6 +4,7 @@ coverage/
 .vite/
 .cache/
 *.log
+.commitinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

@@ -152,5 +152,5 @@ function isMissingFileError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
   }
-  return /not found|ENOENT|does not exist/i.test(error.message);
+  return /not found|ENOENT|does not exist|not exists/i.test(error.message);
 }
