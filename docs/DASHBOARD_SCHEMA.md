@@ -67,14 +67,11 @@ Components are concrete UI elements:
 - `actionIds`
 - `visibility`
 
-MVP component types:
+MVP runtime component types:
 
 - `light-card`
 - `sensor-card`
 - `scene-button`
-
-Prepared component types:
-
 - `room-card`
 - `thermostat-card`
 - `blind-card`

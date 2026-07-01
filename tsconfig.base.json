@@ -14,6 +14,8 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
+      "@dashboard-ng/runtime": ["packages/runtime/src/index.ts"],
+      "@dashboard-ng/runtime/*": ["packages/runtime/src/*"],
       "@dashboard-ng/shared": ["packages/shared/src/index.ts"],
       "@dashboard-ng/shared/*": ["packages/shared/src/*"]
     }

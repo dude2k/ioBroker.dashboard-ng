@@ -11,6 +11,8 @@
   },
   "include": [
     "packages/shared/src/**/*.ts",
+    "packages/runtime/src/**/*.ts",
+    "packages/runtime/src/**/*.tsx",
     "packages/editor/src/**/*.ts",
     "packages/editor/src/**/*.tsx",
     "packages/viewer/src/**/*.ts",

@@ -12,7 +12,8 @@
 - State picker with object search.
 - State read/write.
 - Safe formulas and calculated values.
-- Light Card, Sensor Card and Scene Button.
+- Shared runtime renderers for Light, Sensor, Scene, Room, Thermostat, Blind,
+  Energy, Mini Chart and Camera cards.
 - Theme presets: Modern Dark and Clean Light.
 - Kiosk/fullscreen, optional Wake Lock and burn-in protection.
 - README in German and English.
@@ -23,12 +24,9 @@ Detailed remaining MVP implementation tasks are tracked in
 
 ## Post-MVP
 
-- Room Card.
-- Thermostat Card.
-- Blind/Shutter Card.
-- Energy Card.
-- Mini Chart Card with history abstraction.
-- Camera Card.
+- Rich per-card inspector controls.
+- Mini Chart history abstraction.
+- Camera asset and snapshot source management.
 - Better device mapping heuristics.
 - Template library with one or two polished starter dashboards.
 - Asset upload and management.
