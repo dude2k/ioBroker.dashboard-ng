@@ -9,9 +9,9 @@ const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
 
 describe("adapter package metadata", () => {
   it("keeps package and adapter versions aligned", () => {
-    expect(packageJson.version).toBe("0.2.0");
+    expect(packageJson.version).toBe("0.2.1");
     expect(ioPackageJson.common.version).toBe(packageJson.version);
-    expect(readme).toContain("Current adapter version: `0.2.0`");
+    expect(readme).toContain("Current adapter version: `0.2.1`");
   });
 
   it("keeps adapter naming stable for GitHub installs", () => {
@@ -27,5 +27,12 @@ describe("adapter package metadata", () => {
     });
     expect(ioPackageJson.common.tier).toBe(3);
     expect(ioPackageJson.common.license).toBeUndefined();
+  });
+
+  it("publishes viewer files through the ioBroker web adapter namespace", () => {
+    expect(ioPackageJson.common.www).toBeUndefined();
+    expect(ioPackageJson.common.localLinks._default).toContain("/dashboard-ng/index.html");
+    expect(ioPackageJson.common.localLinks._default).not.toContain("/adapter/dashboard-ng/");
+    expect(packageJson.files).toContain("www");
   });
 });

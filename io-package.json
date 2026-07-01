@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "news": {
+      "0.2.1": {
+        "en": "Corrected the Viewer web link so ioBroker web opens the dashboard-ng file namespace.",
+        "de": "Viewer-Web-Link korrigiert, damit ioBroker web den dashboard-ng-Dateibereich oeffnet.",
+        "ru": "Ispravlena ssylka Viewer web dlya otkrytiya file namespace dashboard-ng v ioBroker web.",
+        "pt": "Link web do Viewer corrigido para abrir o namespace de arquivos dashboard-ng no ioBroker web.",
+        "nl": "Viewer-weblink gecorrigeerd zodat ioBroker web de dashboard-ng bestandsruimte opent.",
+        "fr": "Lien web du Viewer corrige pour ouvrir l'espace fichiers dashboard-ng dans ioBroker web.",
+        "it": "Link web del Viewer corretto per aprire lo spazio file dashboard-ng in ioBroker web.",
+        "es": "Enlace web del Viewer corregido para abrir el espacio de archivos dashboard-ng en ioBroker web.",
+        "pl": "Poprawiono link web Viewera, aby ioBroker web otwieral przestrzen plikow dashboard-ng.",
+        "uk": "Vypravleno web-posylannya Viewer dlya vidkryttya file namespace dashboard-ng v ioBroker web.",
+        "zh-cn": "Viewer web link corrected to open the dashboard-ng file namespace in ioBroker web."
+      },
       "0.2.0": {
         "en": "Shared component runtime for Editor and Viewer plus full MVP card renderers.",
         "de": "Gemeinsame Komponenten-Runtime fuer Editor und Viewer plus alle MVP-Karten-Renderer.",
@@ -78,7 +91,7 @@
       "config": "materialize"
     },
     "localLinks": {
-      "_default": "%web_protocol%://%ip%:%web_port%/adapter/dashboard-ng/index.html"
+      "_default": "%web_protocol%://%ip%:%web_port%/dashboard-ng/index.html"
     },
     "dependencies": [
       {
