@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "news": {
+      "0.2.0": {
+        "en": "Shared component runtime for Editor and Viewer plus full MVP card renderers.",
+        "de": "Gemeinsame Komponenten-Runtime fuer Editor und Viewer plus alle MVP-Karten-Renderer.",
+        "ru": "Общая среда выполнения компонентов для редактора и просмотрщика, плюс все рендереры MVP-карт.",
+        "pt": "Runtime de componentes compartilhado para Editor e Viewer, alem de todos os renderizadores de cartoes MVP.",
+        "nl": "Gedeelde componentruntime voor Editor en Viewer plus alle MVP-kaart-renderers.",
+        "fr": "Runtime de composants partage pour l'editeur et la visionneuse, avec tous les rendus de cartes MVP.",
+        "it": "Runtime componenti condiviso per Editor e Viewer con tutti i renderer delle schede MVP.",
+        "es": "Runtime de componentes compartido para Editor y Viewer con todos los renderizadores de tarjetas MVP.",
+        "pl": "Wspolne srodowisko komponentow dla edytora i widoku oraz wszystkie renderery kart MVP.",
+        "uk": "Спільне середовище виконання компонентів для редактора і переглядача, плюс усі рендерери MVP-карт.",
+        "zh-cn": "编辑器和查看器共享组件运行时，并包含全部 MVP 卡片渲染器。"
+      },
       "0.1.0": {
         "en": "Initial MVP foundation with editor, viewer, schema, migrations and storage.",
         "de": "Erste MVP-Grundlage mit Editor, Viewer, Schema, Migrationen und Speicherung.",
