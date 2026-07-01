@@ -30,10 +30,13 @@ interface EditorState {
   dirty: boolean;
   status: string;
   stateValues: Record<string, StatePrimitive>;
+  dragComponentType: ComponentType | undefined;
   setProject(project: DashboardProject, status?: string): void;
   setStatus(status: string): void;
   setPreview(preview: PreviewSize): void;
   setStateValues(values: Record<string, StatePrimitive>): void;
+  startPaletteDrag(type: ComponentType): void;
+  endPaletteDrag(): void;
   switchPage(pageId: string): void;
   createPage(name?: string): void;
   renamePage(pageId: string, name: string): void;
@@ -67,6 +70,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   dirty: false,
   status: "Ready",
   stateValues: {},
+  dragComponentType: undefined,
 
   setProject(project, status = "Loaded") {
     set({
@@ -76,6 +80,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       future: [],
       dirty: false,
       status,
+      dragComponentType: undefined,
     });
   },
 
@@ -89,6 +94,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setStateValues(values) {
     set({ stateValues: values });
+  },
+
+  startPaletteDrag(type) {
+    set({ dragComponentType: type });
+  },
+
+  endPaletteDrag() {
+    set({ dragComponentType: undefined });
   },
 
   switchPage(pageId) {

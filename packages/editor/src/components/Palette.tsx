@@ -10,6 +10,8 @@ import {
   Zap,
 } from "lucide-react";
 import { componentCatalog, type ComponentCatalogEntry } from "@dashboard-ng/shared";
+import { createComponentDragPayload, DASHBOARD_COMPONENT_MIME } from "../lib/dragDrop";
+import { useEditorStore } from "../store/editorStore";
 
 const icons = {
   Camera,
@@ -28,6 +30,9 @@ interface PaletteProps {
 }
 
 export function Palette({ onAdd }: PaletteProps) {
+  const startPaletteDrag = useEditorStore((state) => state.startPaletteDrag);
+  const endPaletteDrag = useEditorStore((state) => state.endPaletteDrag);
+
   return (
     <aside className="palette" aria-label="Components">
       <div className="panel-title">Components</div>
@@ -43,9 +48,18 @@ export function Palette({ onAdd }: PaletteProps) {
               title={entry.description}
               onClick={() => entry.implemented && onAdd(entry.type)}
               onDragStart={(event) => {
-                event.dataTransfer.setData("application/dashboard-ng-component", entry.type);
+                if (!entry.implemented) {
+                  event.preventDefault();
+                  return;
+                }
+
+                const payload = createComponentDragPayload(entry.type);
+                event.dataTransfer.setData(DASHBOARD_COMPONENT_MIME, payload);
+                event.dataTransfer.setData("text/plain", payload);
                 event.dataTransfer.effectAllowed = "copy";
+                startPaletteDrag(entry.type);
               }}
+              onDragEnd={endPaletteDrag}
             >
               <Icon size={18} aria-hidden="true" />
               <span>{entry.label}</span>

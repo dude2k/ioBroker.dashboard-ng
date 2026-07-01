@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Copy, Grip, Pencil, Plus, Trash2 } from "lucide-react";
-import type { ComponentType, DashboardComponent, GridPlacement } from "@dashboard-ng/shared";
+import type { DashboardComponent, GridPlacement } from "@dashboard-ng/shared";
 import {
   DashboardRuntimeCard,
   clampGridPlacement,
@@ -10,13 +11,17 @@ import {
 } from "@dashboard-ng/runtime";
 import { getActivePage, getComponentBinding, useEditorStore } from "../store/editorStore";
 import { dashboardClient } from "../lib/client";
+import { getCatalogDropPlacement, readComponentDragType } from "../lib/dragDrop";
 
 export function Canvas() {
+  const [dropPreview, setDropPreview] = useState<GridPlacement>();
   const project = useEditorStore((state) => state.project);
   const preview = useEditorStore((state) => state.preview);
   const selectedIds = useEditorStore((state) => state.selectedIds);
+  const dragComponentType = useEditorStore((state) => state.dragComponentType);
   const selectComponent = useEditorStore((state) => state.selectComponent);
   const addComponent = useEditorStore((state) => state.addComponent);
+  const endPaletteDrag = useEditorStore((state) => state.endPaletteDrag);
   const moveComponent = useEditorStore((state) => state.moveComponent);
   const switchPage = useEditorStore((state) => state.switchPage);
   const createPage = useEditorStore((state) => state.createPage);
@@ -33,7 +38,11 @@ export function Canvas() {
   }
 
   const components = project.components.filter((component) => component.pageId === page.pageId);
-  const height = Math.max(520, (getGridBottom(components, preview) + 2) * cell);
+  const contentBottom = Math.max(
+    getGridBottom(components, preview),
+    dropPreview ? dropPreview.y + dropPreview.h : 0,
+  );
+  const height = Math.max(520, (contentBottom + 2) * cell);
 
   return (
     <main className={`canvas-shell preview-${preview}`}>
@@ -84,7 +93,7 @@ export function Canvas() {
         </div>
       </div>
       <div
-        className="dashboard-canvas"
+        className={`dashboard-canvas ${dropPreview ? "is-drag-target" : ""}`}
         style={{
           width: columns * cell,
           minHeight: height,
@@ -92,26 +101,62 @@ export function Canvas() {
         }}
         onClick={() => useEditorStore.getState().clearSelection()}
         onDragOver={(event) => {
-          event.preventDefault();
-          event.dataTransfer.dropEffect = "copy";
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          const type = event.dataTransfer.getData(
-            "application/dashboard-ng-component",
-          ) as ComponentType;
+          const type = dragComponentType ?? readComponentDragType(event.dataTransfer);
           if (!type) {
             return;
           }
+
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
           const rect = event.currentTarget.getBoundingClientRect();
-          const x = Math.max(
-            0,
-            Math.min(columns - 1, Math.floor((event.clientX - rect.left) / cell)),
+          setDropPreview(
+            getCatalogDropPlacement(type, {
+              clientX: event.clientX,
+              clientY: event.clientY,
+              rect,
+              cell,
+              columns,
+            }),
           );
-          const y = Math.max(0, Math.floor((event.clientY - rect.top) / cell));
-          addComponent(type, { x, y, w: Math.min(3, columns - x), h: 2 });
+        }}
+        onDragLeave={(event) => {
+          const nextTarget = event.relatedTarget;
+          if (!nextTarget || !event.currentTarget.contains(nextTarget as Node)) {
+            setDropPreview(undefined);
+          }
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          const type = readComponentDragType(event.dataTransfer) ?? dragComponentType;
+          if (!type) {
+            setDropPreview(undefined);
+            endPaletteDrag();
+            return;
+          }
+          const rect = event.currentTarget.getBoundingClientRect();
+          const placement =
+            dropPreview ??
+            getCatalogDropPlacement(type, {
+              clientX: event.clientX,
+              clientY: event.clientY,
+              rect,
+              cell,
+              columns,
+            });
+          addComponent(type, placement);
+          setDropPreview(undefined);
+          endPaletteDrag();
         }}
       >
+        {dropPreview ? (
+          <div
+            className="drop-preview"
+            style={{
+              gridColumn: `${dropPreview.x + 1} / span ${dropPreview.w}`,
+              gridRow: `${dropPreview.y + 1} / span ${dropPreview.h}`,
+            }}
+          />
+        ) : null}
         {components.map((component) => {
           const placement = clampGridPlacement(
             resolveComponentPlacement(component, preview),
