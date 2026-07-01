@@ -38,8 +38,8 @@ ioBroker user must be able to create a good-looking dashboard quickly.
 - Conditional visibility, styles and simple actions.
 - Theme system with Modern Dark and Clean Light presets.
 - Kiosk/fullscreen, optional Wake Lock and burn-in protection.
-- MVP components: Light Card, Sensor Card and Scene Button first; Room,
-  Thermostat, Blind/Shutter, Energy, Mini Chart and Camera are prepared next.
+- MVP component runtime: Light Card, Sensor Card, Scene Button, Room,
+  Thermostat, Blind/Shutter, Energy, Mini Chart and Camera.
 - README, product docs, architecture docs, schema docs, roadmap and ADR.
 
 ## Non-Goals for MVP
@@ -59,6 +59,8 @@ ioBroker user must be able to create a good-looking dashboard quickly.
 - Keep Editor and Viewer as separate Vite/React bundles.
 - Keep shared schema, migrations, formulas, themes and action types in
   `packages/shared`.
+- Keep shared React dashboard rendering in `packages/runtime` so Editor preview
+  and Viewer use the same component runtime without loading editor-only UI.
 - Use a versioned JSON schema with a central migration pipeline.
 - Store dashboards through an ioBroker-compatible adapter file storage service.
 - Use a grid-first layout and design tokens, not free-form pixel chaos.
@@ -73,6 +75,7 @@ ioBroker user must be able to create a good-looking dashboard quickly.
   admin/                  Built admin/editor assets and adapter icon
   docs/                   Product, architecture, schema, roadmap and ADRs
   packages/shared/        Schema, migrations, formulas, actions, themes
+  packages/runtime/       Shared React runtime renderers for Editor/Viewer
   packages/editor/        React/Vite dashboard editor
   packages/viewer/        React/Vite dashboard viewer
   src/                    ioBroker adapter backend

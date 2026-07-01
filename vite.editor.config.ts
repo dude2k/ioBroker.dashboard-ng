@@ -9,6 +9,7 @@ export default defineConfig({
   base: "./",
   resolve: {
     alias: {
+      "@dashboard-ng/runtime": path.resolve(__dirname, "packages/runtime/src"),
       "@dashboard-ng/shared": path.resolve(__dirname, "packages/shared/src"),
     },
   },

@@ -1,0 +1,212 @@
+.dng-runtime-container {
+  min-width: 0;
+  min-height: 0;
+}
+
+.dng-runtime-card {
+  --runtime-surface: var(--panel, var(--surface, #172033));
+  --runtime-surface-strong: var(--panel-strong, var(--surface-2, #202b3f));
+  --runtime-text: var(--text, #f8fafc);
+  --runtime-muted: var(--muted, #a7b0c0);
+  --runtime-border: var(--border, #2e3a52);
+  --runtime-accent: var(--accent, #14b8a6);
+  --runtime-accent-2: var(--accent-2, #2563eb);
+  --runtime-warn: var(--warn, #f59e0b);
+  --runtime-danger: var(--danger, #ef4444);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 72px;
+  display: grid;
+  align-content: space-between;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--runtime-border);
+  border-radius: 8px;
+  color: var(--runtime-text);
+  background: var(--runtime-surface);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  text-align: left;
+}
+
+button.dng-runtime-card {
+  font: inherit;
+  cursor: pointer;
+}
+
+button.dng-runtime-card:disabled {
+  cursor: default;
+}
+
+.dng-runtime-card.mode-viewer {
+  min-height: 96px;
+  gap: 12px;
+  padding: 18px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
+}
+
+.dng-runtime-card svg {
+  color: var(--runtime-accent);
+  flex: 0 0 auto;
+}
+
+.dng-runtime-card.tone-light.is-active {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--runtime-accent) 32%, transparent),
+      transparent
+    ),
+    var(--runtime-surface);
+}
+
+.dng-runtime-card.tone-scene {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--runtime-accent-2) 30%, transparent),
+      transparent
+    ),
+    var(--runtime-surface);
+}
+
+.dng-runtime-card.tone-sensor,
+.dng-runtime-card.tone-thermostat {
+  background:
+    linear-gradient(135deg, rgba(245, 158, 11, 0.14), transparent), var(--runtime-surface);
+}
+
+.dng-runtime-card.tone-energy {
+  background:
+    linear-gradient(135deg, rgba(20, 184, 166, 0.14), transparent), var(--runtime-surface);
+}
+
+.dng-runtime-card.tone-camera {
+  padding: 12px;
+}
+
+.dng-runtime-card.is-missing {
+  border-color: var(--runtime-warn);
+}
+
+.dng-runtime-card.has-error {
+  border-color: var(--runtime-danger);
+}
+
+.dng-runtime-card.is-empty,
+.dng-runtime-card.is-loading {
+  border-style: dashed;
+}
+
+.dng-runtime-top {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.dng-runtime-top > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.dng-runtime-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dng-runtime-text.is-muted {
+  color: var(--runtime-muted);
+  font-size: 12px;
+}
+
+.dng-runtime-value {
+  font-size: clamp(22px, 4vw, 36px);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.dng-runtime-value small {
+  margin-left: 5px;
+  color: var(--runtime-muted);
+  font-size: 0.46em;
+}
+
+.dng-runtime-status {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  max-width: calc(100% - 20px);
+  color: var(--runtime-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dng-runtime-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dng-runtime-chip-row span {
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--runtime-border);
+  border-radius: 8px;
+  color: var(--runtime-muted);
+  background: var(--runtime-surface-strong);
+  font-size: 12px;
+}
+
+.dng-runtime-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--runtime-surface-strong);
+}
+
+.dng-runtime-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--runtime-accent);
+}
+
+.dng-runtime-bars {
+  height: 70px;
+  display: flex;
+  align-items: end;
+  gap: 5px;
+}
+
+.dng-runtime-bars span {
+  flex: 1;
+  min-width: 4px;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, var(--runtime-accent), var(--runtime-accent-2));
+}
+
+.dng-runtime-image {
+  width: 100%;
+  min-height: 92px;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 7px;
+  background: var(--runtime-surface-strong);
+}
+
+.dng-runtime-image.is-empty {
+  display: grid;
+  place-items: center;
+  color: var(--runtime-muted);
+  border: 1px dashed var(--runtime-border);
+}
+
+.dng-runtime-button {
+  font: inherit;
+  border: 0;
+}

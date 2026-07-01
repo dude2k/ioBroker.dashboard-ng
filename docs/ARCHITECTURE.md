@@ -2,14 +2,16 @@
 
 ## Overview
 
-Dashboard-NG is one ioBroker adapter with three main runtime parts:
+Dashboard-NG is one ioBroker adapter with four main runtime parts:
 
 - Adapter Backend in `src/`
+- Shared Runtime Components in `packages/runtime/`
 - Editor Frontend in `packages/editor/`, built to `admin/`
 - Viewer Frontend in `packages/viewer/`, built to `www/`
 
 Shared schema, migration, formula, action and theme code lives in
-`packages/shared/`.
+`packages/shared/`. Shared React renderers for dashboard cards live in
+`packages/runtime/`.
 
 ## Adapter Backend
 
@@ -59,6 +61,22 @@ The Viewer is a separate React/Vite app. It renders the dashboard runtime only:
 - Connection status hint and reconnect attempts.
 
 The Viewer must stay smaller and simpler than the Editor.
+
+## Shared Runtime Components
+
+`packages/runtime` contains the shared React renderer used by both Editor
+preview and Viewer. It owns:
+
+- Typed runtime card props and state resolution.
+- Component renderers for every MVP card.
+- Internal base components for text, icons, images, containers, buttons and
+  value display.
+- Common runtime layout helpers for breakpoints, grid placement and clamping.
+- Empty, loading, missing-state and error presentation.
+
+Editor-specific configuration UI remains in `packages/editor`. The Viewer
+imports the runtime only and does not depend on Inspector, Palette or drag/drop
+code.
 
 ## Shared Packages
 

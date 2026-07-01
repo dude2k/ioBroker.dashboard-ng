@@ -14,11 +14,19 @@ export interface AdapterFileApi {
     warn(message: string): void;
     error(message: string): void;
   };
-  readFileAsync(adapterName: string, fileName: string): Promise<Buffer | string>;
+  readFileAsync(adapterName: string, fileName: string): Promise<AdapterFileContent>;
   writeFileAsync(adapterName: string, fileName: string, data: Buffer | string): Promise<void>;
   mkdirAsync?(adapterName: string, directory: string): Promise<void>;
   setStateAsync?(id: string, value: unknown, ack?: boolean): Promise<void>;
 }
+
+export type AdapterFileContent =
+  | Buffer
+  | string
+  | {
+      file?: Buffer | string;
+      data?: Buffer | string;
+    };
 
 export interface StoredDashboard {
   dashboard: DashboardProject;
@@ -36,7 +44,7 @@ export class DashboardStorageService {
   async loadDashboard(dashboardId = "default"): Promise<StoredDashboard> {
     await this.ensureDirectories();
     const fileName = this.dashboardFileName(dashboardId);
-    let raw: Buffer | string;
+    let raw: AdapterFileContent;
 
     try {
       raw = await this.adapter.readFileAsync(this.adapter.name, fileName);
@@ -53,7 +61,7 @@ export class DashboardStorageService {
       throw error;
     }
 
-    const parsed = JSON.parse(bufferToString(raw)) as unknown;
+    const parsed = JSON.parse(fileContentToString(raw)) as unknown;
     const migration = migrateDashboardProject(parsed);
     let backupFile: string | undefined;
 
@@ -144,8 +152,20 @@ function sanitizeFilePart(value: string): string {
   return value.replace(/[^a-zA-Z0-9_.-]/g, "_") || "default";
 }
 
-function bufferToString(value: Buffer | string): string {
-  return Buffer.isBuffer(value) ? value.toString("utf8") : value;
+function fileContentToString(value: AdapterFileContent): string {
+  if (Buffer.isBuffer(value)) {
+    return value.toString("utf8");
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value.file !== undefined) {
+    return fileContentToString(value.file);
+  }
+  if (value.data !== undefined) {
+    return fileContentToString(value.data);
+  }
+  return String(value);
 }
 
 function isMissingFileError(error: unknown): boolean {

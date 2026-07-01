@@ -32,6 +32,7 @@ JavaScript.
 - Versioned JSON schema with migrations.
 - State picker with object search.
 - State read/write bindings.
+- Shared card runtime for Editor preview and Viewer.
 - Safe formulas for calculated values.
 - Simple tap actions such as toggle state or set state.
 - Light and dark theme presets.
@@ -62,7 +63,7 @@ root once build output exists.
 ## First Steps
 
 1. Open the adapter admin page.
-2. Add a Light Card, Sensor Card or Scene Button from the palette.
+2. Add a card from the palette.
 3. Place it on the grid.
 4. Bind an ioBroker state in the inspector.
 5. Save the dashboard.
@@ -148,6 +149,12 @@ Editor and `www/` for the Viewer. It is prepared for ioBroker adapter checks,
 but the MVP still needs validation in real ioBroker installations before a
 stable release.
 
+## Current Main Branch Notes
+
+- Added shared runtime renderers for Editor preview and Viewer.
+- Enabled Room, Thermostat, Blind/Shutter, Energy, Mini Chart and Camera cards
+  with safe default rendering states.
+
 ## Changelog
 
 ### 0.1.0 (2026-07-01)
@@ -161,7 +168,8 @@ stable release.
 
 ## Known MVP Limits
 
-- Only Light Card, Sensor Card and Scene Button are implemented first.
+- All MVP cards render, but advanced per-card inspector controls are still
+  basic.
 - Device detection is intentionally basic.
 - Asset upload is prepared in the schema but not fully implemented.
 - No plugin system, marketplace or VIS/VIS2 import.

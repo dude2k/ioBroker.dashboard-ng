@@ -1,13 +1,12 @@
-import { Expand, Lightbulb, RotateCcw, Sparkles, Thermometer } from "lucide-react";
+import { Expand, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type {
-  Binding,
-  DashboardComponent,
-  DashboardProject,
-  GridPlacement,
-  StatePrimitive,
-} from "@dashboard-ng/shared";
+import type { DashboardProject } from "@dashboard-ng/shared";
 import { createDefaultDashboard } from "@dashboard-ng/shared";
+import {
+  DashboardRuntimeCard,
+  resolveComponentPlacement,
+  type RuntimeStateValues,
+} from "@dashboard-ng/runtime";
 import { viewerClient } from "./lib/client";
 
 type WakeLockSentinel = {
@@ -16,7 +15,7 @@ type WakeLockSentinel = {
 
 export function ViewerApp() {
   const [project, setProject] = useState<DashboardProject>(() => createDefaultDashboard());
-  const [stateValues, setStateValues] = useState<Record<string, StatePrimitive>>({});
+  const [stateValues, setStateValues] = useState<RuntimeStateValues>({});
   const [online, setOnline] = useState(true);
   const [burnInOffset, setBurnInOffset] = useState({ x: 0, y: 0 });
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | undefined>();
@@ -63,9 +62,9 @@ export function ViewerApp() {
         if (!active) {
           return;
         }
-        const nextValues: Record<string, StatePrimitive> = {};
+        const nextValues: RuntimeStateValues = {};
         snapshots.forEach((snapshot) => {
-          nextValues[snapshot.id] = snapshot.value;
+          nextValues[snapshot.id] = snapshot;
         });
         setStateValues(nextValues);
         setOnline(true);
@@ -152,9 +151,13 @@ export function ViewerApp() {
 
       <main className="viewer-grid">
         {components.map((component) => {
-          const placement = getPlacement(component);
-          const binding = getBinding(project, component);
-          const value = binding?.stateId ? stateValues[binding.stateId] : undefined;
+          const placement = resolveComponentPlacement(component, "wall");
+          const bindings = project.bindings.filter(
+            (binding) => binding.componentId === component.componentId,
+          );
+          const actions = project.actions.filter(
+            (action) => action.componentId === component.componentId,
+          );
           return (
             <section
               className="viewer-tile"
@@ -164,14 +167,22 @@ export function ViewerApp() {
                 gridRow: `${placement.y + 1} / span ${placement.h}`,
               }}
             >
-              <RuntimeCard
-                binding={binding}
+              <DashboardRuntimeCard
+                actions={actions}
+                bindings={bindings}
                 component={component}
+                mode="viewer"
                 stateValues={stateValues}
-                value={value}
-                onStateChange={(stateId, nextValue) => {
+                onLocalStateChange={(stateId, nextValue) => {
                   setStateValues((current) => ({ ...current, [stateId]: nextValue }));
                 }}
+                onNavigate={(pageId) => {
+                  setProject((current) => ({
+                    ...current,
+                    settings: { ...current.settings, activePageId: pageId },
+                  }));
+                }}
+                onWriteState={(stateId, value) => viewerClient.writeState(stateId, value)}
               />
             </section>
           );
@@ -179,104 +190,4 @@ export function ViewerApp() {
       </main>
     </div>
   );
-}
-
-function RuntimeCard({
-  component,
-  binding,
-  value,
-  stateValues,
-  onStateChange,
-}: {
-  component: DashboardComponent;
-  binding: Binding | undefined;
-  value: StatePrimitive | undefined;
-  stateValues: Record<string, StatePrimitive>;
-  onStateChange(stateId: string, value: StatePrimitive): void;
-}) {
-  if (component.type === "light-card") {
-    const active = Boolean(value);
-    return (
-      <button
-        className={`viewer-card light ${active ? "is-on" : ""}`}
-        onClick={async () => {
-          if (!binding?.stateId) {
-            return;
-          }
-          const next = !active;
-          await viewerClient.writeState(binding.stateId, next);
-          onStateChange(binding.stateId, next);
-        }}
-      >
-        <Lightbulb size={26} aria-hidden="true" />
-        <span>{String(component.props.title ?? component.name)}</span>
-        <strong>{active ? "On" : "Off"}</strong>
-      </button>
-    );
-  }
-
-  if (component.type === "scene-button") {
-    return (
-      <button
-        className="viewer-card scene"
-        onClick={async () => {
-          if (!binding?.stateId) {
-            return;
-          }
-          await viewerClient.writeState(binding.stateId, true);
-          onStateChange(binding.stateId, true);
-        }}
-      >
-        <Sparkles size={26} aria-hidden="true" />
-        <span>{String(component.props.title ?? component.name)}</span>
-        <strong>Run</strong>
-      </button>
-    );
-  }
-
-  if (component.type === "sensor-card") {
-    const unit = String(component.props.unit ?? "");
-    return (
-      <div className="viewer-card sensor">
-        <Thermometer size={26} aria-hidden="true" />
-        <span>{String(component.props.title ?? component.name)}</span>
-        <strong>
-          {formatValue(value)}
-          {unit ? <small>{unit}</small> : null}
-        </strong>
-      </div>
-    );
-  }
-
-  return (
-    <div className="viewer-card">
-      <span>{String(component.props.title ?? component.name)}</span>
-      <strong>{stateValues[binding?.stateId ?? ""] ?? component.type}</strong>
-    </div>
-  );
-}
-
-function getPlacement(component: DashboardComponent): GridPlacement {
-  return (
-    component.layout.wall ??
-    component.layout.desktop ??
-    component.layout.tablet ??
-    component.layout.phone ?? { x: 0, y: 0, w: 3, h: 2 }
-  );
-}
-
-function getBinding(project: DashboardProject, component: DashboardComponent): Binding | undefined {
-  return project.bindings.find(
-    (binding) => binding.componentId === component.componentId && binding.target === "value",
-  );
-}
-
-function formatValue(value: StatePrimitive | undefined): string {
-  if (value === undefined || value === null) {
-    return "--";
-  }
-  if (typeof value === "number") {
-    return value.toFixed(Math.abs(value) >= 100 ? 0 : 1);
-  }
-  return String(value);
 }

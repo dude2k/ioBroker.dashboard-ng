@@ -71,20 +71,17 @@ automatically and shows a small status hint when data may be stale.
 
 ## Components
 
-MVP implementation starts with:
+The shared runtime renders these MVP cards in both Editor preview and Viewer:
 
 - Light Card: read/write on/off state, optional brightness later.
 - Sensor Card: value display with unit and status.
 - Scene Button: trigger a state or scene action.
-
-Prepared next:
-
-- Room Card
-- Thermostat Card
-- Blind/Shutter Card
-- Energy Card
-- Mini Chart Card
-- Camera Card
+- Room Card: compact room overview.
+- Thermostat Card: current and target temperature display.
+- Blind/Shutter Card: position display.
+- Energy Card: power or energy value display.
+- Mini Chart Card: compact trend display.
+- Camera Card: image or snapshot display.
 
 Base components may exist internally: Text, Icon, Image, Container, Button and
 Value Display.
