@@ -39,6 +39,8 @@ Frontend communication is command-based through ioBroker `sendTo` messages:
 The Editor is a React/Vite app. It provides:
 
 - Component palette.
+- Page management for creating, renaming, duplicating, deleting and switching
+  dashboard pages.
 - Grid canvas with snap-to-grid.
 - Property inspector.
 - State picker.

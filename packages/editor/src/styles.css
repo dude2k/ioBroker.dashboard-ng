@@ -211,22 +211,67 @@ button {
   display: flex;
   gap: 8px;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 12px;
 }
 
+.page-tab-list,
+.page-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-tab-list {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.page-actions {
+  flex: 0 0 auto;
+}
+
 .page-tab {
+  max-width: 180px;
   min-width: 72px;
   height: 32px;
+  padding: 0 12px;
   border-radius: 8px;
   color: var(--muted);
   background: transparent;
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .page-tab.is-active {
   color: var(--text);
   background: var(--panel);
   border: 1px solid var(--border);
+}
+
+.page-actions button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.page-actions button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.page-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .dashboard-canvas {

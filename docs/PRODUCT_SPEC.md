@@ -57,7 +57,7 @@ stay simple.
 ## Editor Concept
 
 - Left palette: components and templates.
-- Center: responsive grid canvas with snap-to-grid.
+- Center: page tabs and responsive grid canvas with snap-to-grid.
 - Right inspector: selected component, bindings, actions, visibility and style.
 - Top bar: save, import/export, undo/redo, copy/paste, theme, preview size and
   Edit/View switch.

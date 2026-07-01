@@ -1,4 +1,4 @@
-import { Grip } from "lucide-react";
+import { Copy, Grip, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ComponentType, DashboardComponent, GridPlacement } from "@dashboard-ng/shared";
 import {
   DashboardRuntimeCard,
@@ -18,6 +18,11 @@ export function Canvas() {
   const selectComponent = useEditorStore((state) => state.selectComponent);
   const addComponent = useEditorStore((state) => state.addComponent);
   const moveComponent = useEditorStore((state) => state.moveComponent);
+  const switchPage = useEditorStore((state) => state.switchPage);
+  const createPage = useEditorStore((state) => state.createPage);
+  const renamePage = useEditorStore((state) => state.renamePage);
+  const duplicatePage = useEditorStore((state) => state.duplicatePage);
+  const deletePage = useEditorStore((state) => state.deletePage);
   const stateValues = useEditorStore((state) => state.stateValues);
   const page = getActivePage(project);
   const columns = runtimeColumns[preview];
@@ -33,14 +38,50 @@ export function Canvas() {
   return (
     <main className={`canvas-shell preview-${preview}`}>
       <div className="page-tabs">
-        {project.pages.map((candidate) => (
-          <button
-            className={candidate.pageId === page.pageId ? "page-tab is-active" : "page-tab"}
-            key={candidate.pageId}
-          >
-            {candidate.name}
+        <div className="page-tab-list" role="tablist" aria-label="Dashboard pages">
+          {project.pages.map((candidate) => (
+            <button
+              aria-selected={candidate.pageId === page.pageId}
+              className={candidate.pageId === page.pageId ? "page-tab is-active" : "page-tab"}
+              key={candidate.pageId}
+              role="tab"
+              title={candidate.name}
+              onClick={() => switchPage(candidate.pageId)}
+            >
+              {candidate.name}
+            </button>
+          ))}
+        </div>
+        <div className="page-actions" aria-label="Page actions">
+          <button title="Add page" onClick={() => createPage()}>
+            <Plus size={15} aria-hidden="true" />
           </button>
-        ))}
+          <button
+            title="Rename page"
+            onClick={() => {
+              const name = window.prompt("Page name", page.name);
+              if (name !== null) {
+                renamePage(page.pageId, name);
+              }
+            }}
+          >
+            <Pencil size={15} aria-hidden="true" />
+          </button>
+          <button title="Duplicate page" onClick={() => duplicatePage(page.pageId)}>
+            <Copy size={15} aria-hidden="true" />
+          </button>
+          <button
+            disabled={project.pages.length <= 1}
+            title="Delete page"
+            onClick={() => {
+              if (window.confirm(`Delete page "${page.name}"?`)) {
+                deletePage(page.pageId);
+              }
+            }}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+          </button>
+        </div>
       </div>
       <div
         className="dashboard-canvas"
