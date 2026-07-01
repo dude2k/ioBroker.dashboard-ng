@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.2.2",
+    "version": "0.3.0",
     "news": {
+      "0.3.0": {
+        "en": "Editor page management plus snapped palette drag/drop and move/resize handles.",
+        "de": "Editor-Seitenverwaltung plus gerastertes Palette-Drag/Drop und Move/Resize-Handles.",
+        "ru": "Editor page management plus snapped palette drag/drop and move/resize handles.",
+        "pt": "Editor page management plus snapped palette drag/drop and move/resize handles.",
+        "nl": "Editor page management plus snapped palette drag/drop and move/resize handles.",
+        "fr": "Editor page management plus snapped palette drag/drop and move/resize handles.",
+        "it": "Editor page management plus snapped palette drag/drop and move/resize handles.",
+        "es": "Editor page management plus snapped palette drag/drop and move/resize handles.",
+        "pl": "Editor page management plus snapped palette drag/drop and move/resize handles.",
+        "uk": "Editor page management plus snapped palette drag/drop and move/resize handles.",
+        "zh-cn": "Editor page management plus snapped palette drag/drop and move/resize handles."
+      },
       "0.2.2": {
         "en": "Added a compatibility redirect for the old /adapter/dashboard-ng/index.html URL.",
         "de": "Kompatibilitaets-Redirect fuer die alte URL /adapter/dashboard-ng/index.html hinzugefuegt.",

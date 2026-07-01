@@ -22,11 +22,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: ioBroker/testing-action-check@v1
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
         with:
           node-version: "24.x"
-          type-checking: true
-          lint: true
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint and type-check
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Check package metadata
+        run: npm run test:package
 
   adapter-tests:
     needs: check-and-lint
@@ -39,11 +57,23 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: ioBroker/testing-action-adapter@v1
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-          os: ${{ matrix.os }}
-          build: true
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build adapter and frontends
+        run: npm run build
+
+      - name: Run adapter integration test
+        run: npm run test:integration
 
   deploy:
     needs: [check-and-lint, adapter-tests]
@@ -58,8 +88,26 @@ jobs:
       id-token: write
 
     steps:
-      - uses: ioBroker/testing-action-deploy@v1
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
         with:
           node-version: "24.x"
-          build: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
