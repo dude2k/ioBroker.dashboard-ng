@@ -48,6 +48,7 @@ button {
   color: var(--text);
   display: grid;
   grid-template-rows: 58px 1fr;
+  position: relative;
 }
 
 .editor-app.theme-clean-light {
@@ -136,6 +137,113 @@ button {
 
 .toolbar-icon-active {
   color: var(--accent);
+}
+
+button.toolbar-icon-active {
+  color: var(--accent);
+  background: var(--panel-strong);
+}
+
+.diagnostics-panel {
+  position: absolute;
+  z-index: 20;
+  top: 66px;
+  right: 14px;
+  width: min(720px, calc(100vw - 28px));
+  max-height: min(560px, calc(100vh - 86px));
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.36);
+}
+
+.diagnostics-header {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.diagnostics-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diagnostics-actions button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.diagnostics-actions button:hover {
+  color: var(--accent);
+  background: var(--panel-strong);
+}
+
+.diagnostics-status {
+  padding: 9px 12px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnostics-list {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+}
+
+.diagnostics-entry,
+.diagnostics-empty {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
+  padding: 7px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
+  color: var(--text);
+}
+
+.diagnostics-empty {
+  grid-template-columns: 1fr;
+  color: var(--muted);
+}
+
+.diagnostics-entry time {
+  color: var(--muted);
+}
+
+.diagnostics-entry span {
+  overflow-wrap: anywhere;
+}
+
+.diagnostics-entry.is-warn span {
+  color: var(--warn);
+}
+
+.diagnostics-entry.is-error span {
+  color: var(--danger);
 }
 
 .preview-switch .toolbar-separator {

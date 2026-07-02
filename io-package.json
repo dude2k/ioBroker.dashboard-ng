@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.9",
+    "version": "0.3.10",
     "news": {
+      "0.3.10": {
+        "en": "Added copyable Editor diagnostics for dashboard load/save debugging and made frontend logging safe.",
+        "de": "Kopierbare Editor-Diagnose fuer Dashboard-Laden/Speichern ergaenzt und Frontend-Logging abgesichert.",
+        "ru": "Dobavlena kopiruemaya diagnostika Editor dlya otladki load/save dashboard i zashchishcheno frontend logging.",
+        "pt": "Adicionada diagnostica copiavel no Editor para debug de load/save do dashboard e logging frontend seguro.",
+        "nl": "Kopieerbare Editor-diagnostiek toegevoegd voor dashboard load/save-debugging en frontend logging veiliger gemaakt.",
+        "fr": "Diagnostics copiables dans l'Editor pour deboguer load/save dashboard et logging frontend securise.",
+        "it": "Aggiunta diagnostica copiabile nell'Editor per debug load/save dashboard e logging frontend sicuro.",
+        "es": "Agregada diagnostica copiable en el Editor para depurar load/save dashboard y logging frontend seguro.",
+        "pl": "Dodano kopiowalna diagnostyke Editor dla debugowania load/save dashboard i bezpieczne frontend logging.",
+        "uk": "Dodano kopiyovanu diahnostyku Editor dlya debug load/save dashboard i zabezpecheno frontend logging.",
+        "zh-cn": "Added copyable Editor diagnostics for dashboard load/save debugging and made frontend logging safe."
+      },
       "0.3.9": {
         "en": "Fixed ioBroker socket-client file API handling and added browser and adapter diagnostics for dashboard persistence.",
         "de": "ioBroker-socket-client-Datei-API korrigiert und Browser-/Adapter-Diagnose fuer Dashboard-Speicherung ergaenzt.",

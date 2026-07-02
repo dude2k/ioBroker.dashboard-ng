@@ -1,3 +1,5 @@
+import { appendDiagnostic } from "./diagnostics";
+
 export interface IoBrokerCommandResponse<T> {
   ok: boolean;
   data?: T;
@@ -59,14 +61,20 @@ export async function sendIoBrokerCommand<T>(
 ): Promise<T | undefined> {
   const socket = await resolveIoBrokerSocket();
   if (!socket) {
+    appendDiagnostic("warn", `sendTo ${command} skipped: no ioBroker socket`);
     return undefined;
   }
 
   const instance = `${adapterName}.${readIoBrokerAdapterInstance(adapterName) ?? 0}`;
+  appendDiagnostic(
+    "info",
+    `sendTo ${command} start target=${instance} capabilities=${describeIoBrokerSocket(socket)}`,
+  );
   return new Promise((resolve, reject) => {
     let settled = false;
     const timeout = window.setTimeout(() => {
       settled = true;
+      appendDiagnostic("error", `sendTo ${command} failed: timeout target=${instance}`);
       reject(new Error(`Command ${command} timed out.`));
     }, 8000);
 
@@ -78,14 +86,20 @@ export async function sendIoBrokerCommand<T>(
       window.clearTimeout(timeout);
       const normalized = normalizeResponse<T>(response);
       if (!normalized.ok) {
+        appendDiagnostic(
+          "error",
+          `sendTo ${command} failed: ${normalized.error ?? "ioBroker command failed"}`,
+        );
         reject(new Error(normalized.error ?? `Command ${command} failed.`));
         return;
       }
+      appendDiagnostic("info", `sendTo ${command} ok`);
       resolve(normalized.data);
     };
 
     try {
       if (typeof socket.sendTo === "function") {
+        appendDiagnostic("info", `sendTo ${command} using socket.sendTo`);
         const result = socket.sendTo(instance, command, payload, done);
         if (result && typeof result.then === "function") {
           result
@@ -106,10 +120,12 @@ export async function sendIoBrokerCommand<T>(
         return;
       }
 
+      appendDiagnostic("info", `sendTo ${command} using raw socket.emit`);
       socket.emit("sendTo", instance, command, payload, done);
     } catch (error) {
       settled = true;
       window.clearTimeout(timeout);
+      appendDiagnostic("error", `sendTo ${command} failed: ${readError(error)}`);
       reject(error instanceof Error ? error : new Error(String(error)));
     }
   });
@@ -119,11 +135,19 @@ export async function resolveIoBrokerSocket(): Promise<IoBrokerSocketLike | unde
   const existing = readExistingSocket();
   if (existing) {
     window.socket = existing;
+    appendDiagnostic("info", `ioBroker socket resolved: ${describeIoBrokerSocket(existing)}`);
     return existing;
   }
 
   socketPromise ??= createSocket();
-  return socketPromise;
+  const socket = await socketPromise;
+  appendDiagnostic(
+    socket ? "info" : "warn",
+    socket
+      ? `ioBroker socket created: ${describeIoBrokerSocket(socket)}`
+      : "ioBroker socket not available",
+  );
+  return socket;
 }
 
 export function readIoBrokerAdapterInstance(adapterName: string): number | undefined {
@@ -155,7 +179,7 @@ export function parseIoBrokerAdapterInstance(
 function readExistingSocket(): IoBrokerSocketLike | undefined {
   return readWindowValue((candidate) => {
     const socket = candidate.socket;
-    if (socket && (typeof socket.sendTo === "function" || typeof socket.emit === "function")) {
+    if (socket && isUsableSocket(socket)) {
       return socket;
     }
     return undefined;
@@ -163,15 +187,40 @@ function readExistingSocket(): IoBrokerSocketLike | undefined {
 }
 
 async function createSocket(): Promise<IoBrokerSocketLike | undefined> {
+  appendDiagnostic("info", "Loading /socket.io/socket.io.js for ioBroker socket fallback");
   await ensureSocketIoScript();
   const factory = readWindowValue((candidate) => candidate.io);
   if (!factory) {
+    appendDiagnostic("warn", "No ioBroker socket factory found after socket.io script load");
     return undefined;
   }
 
   const socket = factory.connect ? factory.connect() : factory();
   window.socket = socket;
   return socket;
+}
+
+export function describeIoBrokerSocket(socket: IoBrokerSocketLike): string {
+  const methods = [
+    ["sendTo", socket.sendTo],
+    ["readFile", socket.readFile],
+    ["writeFile", socket.writeFile],
+    ["writeFile64", socket.writeFile64],
+    ["emit", socket.emit],
+  ]
+    .filter(([, value]) => typeof value === "function")
+    .map(([name]) => name);
+  return methods.length ? methods.join(",") : "no-known-methods";
+}
+
+function isUsableSocket(socket: IoBrokerSocketLike): boolean {
+  return (
+    typeof socket.sendTo === "function" ||
+    typeof socket.readFile === "function" ||
+    typeof socket.writeFile === "function" ||
+    typeof socket.writeFile64 === "function" ||
+    typeof socket.emit === "function"
+  );
 }
 
 function normalizeResponse<T>(response: unknown): IoBrokerCommandResponse<T> {
@@ -244,4 +293,8 @@ function escapeRegExp(value: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object";
+}
+
+function readError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

@@ -8,7 +8,12 @@ import {
   type StatePrimitive,
   type StateSnapshot,
 } from "@dashboard-ng/shared";
-import { readIoBrokerFile, sendIoBrokerCommand, writeIoBrokerFile } from "@dashboard-ng/runtime";
+import {
+  appendDiagnostic,
+  readIoBrokerFile,
+  sendIoBrokerCommand,
+  writeIoBrokerFile,
+} from "@dashboard-ng/runtime";
 
 const STORAGE_KEY = "dashboard-ng.editor.project";
 const STATE_KEY = "dashboard-ng.editor.states";
@@ -211,12 +216,7 @@ function readError(error: unknown): string {
 
 function logClient(operation: string, status: "start" | "ok" | "failed", detail?: string): void {
   const suffix = detail ? `: ${detail}` : "";
-  const message = `[Dashboard-NG] ${operation} ${status}${suffix}`;
-  if (status === "failed") {
-    console.warn(message);
-    return;
-  }
-  console.info(message);
+  appendDiagnostic(status === "failed" ? "error" : "info", `${operation} ${status}${suffix}`);
 }
 
 function readStoredDashboard(): DashboardProject | undefined {

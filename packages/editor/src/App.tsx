@@ -1,4 +1,5 @@
 import {
+  Bug,
   ClipboardPaste,
   Copy,
   CopyPlus,
@@ -14,15 +15,23 @@ import {
   Smartphone,
   Sun,
   Tablet,
+  Trash2,
   Undo2,
   Upload,
+  X,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   validateDashboardProject,
   type DashboardProject,
   type StatePrimitive,
 } from "@dashboard-ng/shared";
+import {
+  clearDiagnostics,
+  diagnosticEventName,
+  getDiagnostics,
+  type DiagnosticEntry,
+} from "@dashboard-ng/runtime";
 import { Canvas } from "./components/Canvas";
 import { Inspector } from "./components/Inspector";
 import { Palette } from "./components/Palette";
@@ -61,6 +70,8 @@ export function App() {
   const nudgeSelected = useEditorStore((state) => state.nudgeSelected);
   const setStateValues = useEditorStore((state) => state.setStateValues);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticEntry[]>(() => getDiagnostics());
   const activeThemeId = project.settings.activeThemeId;
   const selectedComponents = project.components.filter((component) =>
     selectedIds.includes(component.componentId),
@@ -75,6 +86,13 @@ export function App() {
       .then((dashboard) => setProject(dashboard, "Loaded"))
       .catch((error) => setStatus(`Load failed: ${readErrorMessage(error)}`));
   }, [setProject, setStatus]);
+
+  useEffect(() => {
+    const updateDiagnostics = () => setDiagnostics(getDiagnostics());
+    window.addEventListener(diagnosticEventName(), updateDiagnostics);
+    updateDiagnostics();
+    return () => window.removeEventListener(diagnosticEventName(), updateDiagnostics);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -208,6 +226,23 @@ export function App() {
     setProject(imported, "Imported");
   }
 
+  function copyDiagnostics() {
+    const text = formatDiagnostics(diagnostics, status);
+    if (!navigator.clipboard) {
+      setStatus("Diagnostics copy failed: clipboard unavailable");
+      return;
+    }
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => setStatus("Diagnostics copied"))
+      .catch((error: unknown) => setStatus(`Diagnostics copy failed: ${readErrorMessage(error)}`));
+  }
+
+  function resetDiagnostics() {
+    clearDiagnostics();
+    setDiagnostics([]);
+  }
+
   function toggleTheme() {
     const nextProject: DashboardProject = {
       ...project,
@@ -236,6 +271,13 @@ export function App() {
         <nav className="toolbar" aria-label="Editor actions">
           <button title="Save" onClick={() => void saveDashboard()}>
             <Save size={17} aria-hidden="true" />
+          </button>
+          <button
+            className={diagnosticsOpen ? "toolbar-icon-active" : ""}
+            title="Diagnostics"
+            onClick={() => setDiagnosticsOpen((open) => !open)}
+          >
+            <Bug size={17} aria-hidden="true" />
           </button>
           <button title="Import" onClick={() => fileInputRef.current?.click()}>
             <Upload size={17} aria-hidden="true" />
@@ -319,12 +361,70 @@ export function App() {
         />
       </header>
 
+      {diagnosticsOpen ? (
+        <DiagnosticsPanel
+          entries={diagnostics}
+          status={status}
+          onClear={resetDiagnostics}
+          onClose={() => setDiagnosticsOpen(false)}
+          onCopy={copyDiagnostics}
+        />
+      ) : null}
+
       <div className="workspace">
         <Palette onAdd={addComponent} />
         <Canvas />
         <Inspector />
       </div>
     </div>
+  );
+}
+
+interface DiagnosticsPanelProps {
+  entries: DiagnosticEntry[];
+  status: string;
+  onClear(): void;
+  onClose(): void;
+  onCopy(): void;
+}
+
+function DiagnosticsPanel({ entries, status, onClear, onClose, onCopy }: DiagnosticsPanelProps) {
+  const visibleEntries = entries.slice(-80).reverse();
+  return (
+    <section className="diagnostics-panel" aria-label="Diagnostics">
+      <header className="diagnostics-header">
+        <strong>Diagnostics</strong>
+        <div className="diagnostics-actions">
+          <button title="Copy diagnostics" onClick={onCopy}>
+            <Copy size={15} aria-hidden="true" />
+          </button>
+          <button title="Clear diagnostics" onClick={onClear}>
+            <Trash2 size={15} aria-hidden="true" />
+          </button>
+          <button title="Close diagnostics" onClick={onClose}>
+            <X size={15} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+      <div className="diagnostics-status" title={status}>
+        {status}
+      </div>
+      <ol className="diagnostics-list">
+        {visibleEntries.length ? (
+          visibleEntries.map((entry, index) => (
+            <li
+              className={`diagnostics-entry is-${entry.level}`}
+              key={`${entry.timestamp}-${index}`}
+            >
+              <time>{formatDiagnosticTime(entry.timestamp)}</time>
+              <span>{entry.message}</span>
+            </li>
+          ))
+        ) : (
+          <li className="diagnostics-empty">No diagnostics yet</li>
+        )}
+      </ol>
+    </section>
   );
 }
 
@@ -353,6 +453,26 @@ function isImportantStatus(status: string): boolean {
 
 function readErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function formatDiagnostics(entries: DiagnosticEntry[], status: string): string {
+  const lines = [
+    `Dashboard-NG diagnostics`,
+    `Status: ${status}`,
+    `URL: ${window.location.href}`,
+    `User agent: ${navigator.userAgent}`,
+    "",
+    ...entries.map((entry) => `${entry.timestamp} ${entry.level.toUpperCase()} ${entry.message}`),
+  ];
+  return lines.join("\n");
+}
+
+function formatDiagnosticTime(timestamp: string): string {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
 function arrowKeyDelta(key: string, step: number): { x: number; y: number } {

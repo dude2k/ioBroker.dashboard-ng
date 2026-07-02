@@ -1,3 +1,4 @@
+import { appendDiagnostic } from "./diagnostics";
 import { resolveIoBrokerSocket } from "./iobrokerSocket";
 
 interface FileReadResult {
@@ -215,5 +216,8 @@ function logFileOperation(
   detail?: string,
 ): void {
   const suffix = detail ? `: ${detail}` : "";
-  console.info(`[Dashboard-NG] ${operation} ${adapterName}/${path} ${status}${suffix}`);
+  appendDiagnostic(
+    status === "failed" ? "error" : status === "skipped" ? "warn" : "info",
+    `${operation} ${adapterName}/${path} ${status}${suffix}`,
+  );
 }
