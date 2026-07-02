@@ -76,7 +76,7 @@ canvas, state picker and property inspector. Palette cards can be dragged onto
 the canvas with a snapped drop preview based on the component default size.
 Selected cards can be moved and resized on the grid through editor handles. It
 supports undo/redo, copy/paste, import/export and preview sizes for phone,
-tablet, desktop and wall panel.
+tablet, desktop and wall panel, each with portrait and landscape orientation.
 
 ## Viewer
 
@@ -159,6 +159,11 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 `/adapter/dashboard-ng/index.html` do not end in a 404.
 
 ## Changelog
+
+### Unreleased
+
+- Added portrait/landscape responsive preview frames for phone, tablet, desktop
+  and wall panel modes.
 
 ### 0.3.0 (2026-07-01)
 
