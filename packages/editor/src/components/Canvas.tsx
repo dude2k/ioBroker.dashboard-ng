@@ -1,7 +1,9 @@
 import { useState } from "react";
 import {
   Copy,
+  EyeOff,
   Grip,
+  Lock,
   MoveDiagonal2,
   MoveHorizontal,
   MoveVertical,
@@ -18,6 +20,7 @@ import {
 } from "@dashboard-ng/runtime";
 import { getActivePage, getComponentBinding, useEditorStore } from "../store/editorStore";
 import { dashboardClient } from "../lib/client";
+import { isEditorHidden, isEditorLocked } from "../lib/componentEditorState";
 import { getCatalogDropPlacement, readComponentDragType } from "../lib/dragDrop";
 import {
   getPointerGridDelta,
@@ -194,6 +197,8 @@ export function Canvas() {
             layoutDraft?.componentId === component.componentId ? layoutDraft : undefined;
           const placement = activeDraft?.placement ?? storedPlacement;
           const binding = getComponentBinding(project, component);
+          const locked = isEditorLocked(component);
+          const hidden = isEditorHidden(component);
           return (
             <ComponentTile
               bindingMissing={Boolean(binding?.missing)}
@@ -202,13 +207,21 @@ export function Canvas() {
               )}
               component={component}
               actions={project.actions.filter((item) => item.componentId === component.componentId)}
+              isHidden={hidden}
+              isLocked={locked}
               isMoving={activeDraft?.kind === "move"}
               isResizing={activeDraft?.kind === "resize"}
               isSelected={selectedIds.includes(component.componentId)}
               key={component.componentId}
               onSelect={(additive) => selectComponent(component.componentId, additive)}
               onStartMove={(event) => {
-                selectComponent(component.componentId, event.shiftKey);
+                if (locked) {
+                  return;
+                }
+                selectComponent(
+                  component.componentId,
+                  event.shiftKey || event.ctrlKey || event.metaKey,
+                );
                 startLayoutInteraction(event, {
                   columns,
                   componentId: component.componentId,
@@ -221,7 +234,13 @@ export function Canvas() {
                 });
               }}
               onStartResize={(event, handle) => {
-                selectComponent(component.componentId, event.shiftKey);
+                if (locked) {
+                  return;
+                }
+                selectComponent(
+                  component.componentId,
+                  event.shiftKey || event.ctrlKey || event.metaKey,
+                );
                 startLayoutInteraction(event, {
                   columns,
                   componentId: component.componentId,
@@ -248,6 +267,8 @@ interface ComponentTileProps {
   component: DashboardComponent;
   placement: GridPlacement;
   isSelected: boolean;
+  isLocked: boolean;
+  isHidden: boolean;
   isMoving: boolean;
   isResizing: boolean;
   bindingMissing: boolean;
@@ -263,6 +284,8 @@ function ComponentTile({
   component,
   placement,
   isSelected,
+  isLocked,
+  isHidden,
   isMoving,
   isResizing,
   bindingMissing,
@@ -276,7 +299,7 @@ function ComponentTile({
   const setStateValues = useEditorStore((state) => state.setStateValues);
   return (
     <div
-      className={`component-tile ${isSelected ? "is-selected" : ""} ${isMoving ? "is-moving" : ""} ${isResizing ? "is-resizing" : ""} ${bindingMissing ? "has-missing" : ""}`}
+      className={`component-tile ${isSelected ? "is-selected" : ""} ${isLocked ? "is-locked" : ""} ${isHidden ? "is-editor-hidden" : ""} ${isMoving ? "is-moving" : ""} ${isResizing ? "is-resizing" : ""} ${bindingMissing ? "has-missing" : ""}`}
       style={{
         gridColumn: `${placement.x + 1} / span ${placement.w}`,
         gridRow: `${placement.y + 1} / span ${placement.h}`,
@@ -287,12 +310,13 @@ function ComponentTile({
           return;
         }
         event.stopPropagation();
-        onSelect(event.shiftKey);
+        onSelect(event.shiftKey || event.ctrlKey || event.metaKey);
       }}
     >
       <button
         aria-label="Move component"
         className="tile-grip"
+        disabled={isLocked}
         title="Move component"
         type="button"
         onClick={(event) => event.stopPropagation()}
@@ -313,7 +337,13 @@ function ComponentTile({
           await dashboardClient.writeState(stateId, value);
         }}
       />
-      {isSelected ? (
+      {isLocked || isHidden ? (
+        <div className="tile-state-badges" aria-hidden="true">
+          {isLocked ? <Lock size={12} /> : null}
+          {isHidden ? <EyeOff size={12} /> : null}
+        </div>
+      ) : null}
+      {isSelected && !isLocked ? (
         <>
           <ResizeHandleButton handle="east" onStartResize={onStartResize} />
           <ResizeHandleButton handle="south" onStartResize={onStartResize} />

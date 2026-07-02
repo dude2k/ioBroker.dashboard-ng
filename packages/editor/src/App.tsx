@@ -1,7 +1,11 @@
 import {
   ClipboardPaste,
   Copy,
+  CopyPlus,
   Download,
+  Eye,
+  EyeOff,
+  Lock,
   Monitor,
   Moon,
   Redo2,
@@ -22,7 +26,9 @@ import {
 import { Canvas } from "./components/Canvas";
 import { Inspector } from "./components/Inspector";
 import { Palette } from "./components/Palette";
+import { isEditorHidden, isEditorLocked } from "./lib/componentEditorState";
 import { dashboardClient } from "./lib/client";
+import { getPreviewViewport } from "./lib/preview";
 import { useEditorStore, type PreviewSize } from "./store/editorStore";
 
 const previewOptions: Array<{ value: PreviewSize; label: string; icon: typeof Monitor }> = [
@@ -36,6 +42,7 @@ export function App() {
   const project = useEditorStore((state) => state.project);
   const preview = useEditorStore((state) => state.preview);
   const previewOrientation = useEditorStore((state) => state.previewOrientation);
+  const selectedIds = useEditorStore((state) => state.selectedIds);
   const dirty = useEditorStore((state) => state.dirty);
   const status = useEditorStore((state) => state.status);
   const setProject = useEditorStore((state) => state.setProject);
@@ -47,9 +54,20 @@ export function App() {
   const redo = useEditorStore((state) => state.redo);
   const copySelected = useEditorStore((state) => state.copySelected);
   const pasteClipboard = useEditorStore((state) => state.pasteClipboard);
+  const duplicateSelected = useEditorStore((state) => state.duplicateSelected);
+  const toggleSelectedLock = useEditorStore((state) => state.toggleSelectedLock);
+  const toggleSelectedHidden = useEditorStore((state) => state.toggleSelectedHidden);
+  const deleteSelected = useEditorStore((state) => state.deleteSelected);
+  const nudgeSelected = useEditorStore((state) => state.nudgeSelected);
   const setStateValues = useEditorStore((state) => state.setStateValues);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeThemeId = project.settings.activeThemeId;
+  const selectedComponents = project.components.filter((component) =>
+    selectedIds.includes(component.componentId),
+  );
+  const hasSelection = selectedComponents.length > 0;
+  const selectionLocked = selectedComponents.some(isEditorLocked);
+  const selectionHidden = selectedComponents.some(isEditorHidden);
 
   useEffect(() => {
     dashboardClient
@@ -89,6 +107,70 @@ export function App() {
       window.clearInterval(interval);
     };
   }, [project.bindings, setStateValues]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (isTextInputTarget(event.target)) {
+        return;
+      }
+
+      const command = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
+      const viewport = getPreviewViewport(preview, previewOrientation);
+
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        deleteSelected();
+        return;
+      }
+
+      if (event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        const step = event.shiftKey ? 5 : 1;
+        const delta = arrowKeyDelta(event.key, step);
+        nudgeSelected(delta, preview, viewport.columns);
+        return;
+      }
+
+      if (!command) {
+        return;
+      }
+
+      if (key === "c") {
+        event.preventDefault();
+        copySelected();
+      } else if (key === "v") {
+        event.preventDefault();
+        pasteClipboard();
+      } else if (key === "d") {
+        event.preventDefault();
+        duplicateSelected();
+      } else if (key === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      } else if (key === "y") {
+        event.preventDefault();
+        redo();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    copySelected,
+    deleteSelected,
+    duplicateSelected,
+    nudgeSelected,
+    pasteClipboard,
+    preview,
+    previewOrientation,
+    redo,
+    undo,
+  ]);
 
   async function saveDashboard() {
     try {
@@ -171,6 +253,31 @@ export function App() {
           <button title="Paste" onClick={pasteClipboard}>
             <ClipboardPaste size={17} aria-hidden="true" />
           </button>
+          <button disabled={!hasSelection} title="Duplicate selected" onClick={duplicateSelected}>
+            <CopyPlus size={17} aria-hidden="true" />
+          </button>
+          <button
+            disabled={!hasSelection}
+            title={selectionLocked ? "Unlock selected" : "Lock selected"}
+            onClick={toggleSelectedLock}
+          >
+            <Lock
+              className={selectionLocked ? "toolbar-icon-active" : ""}
+              size={17}
+              aria-hidden="true"
+            />
+          </button>
+          <button
+            disabled={!hasSelection}
+            title={selectionHidden ? "Show selected" : "Hide selected"}
+            onClick={toggleSelectedHidden}
+          >
+            {selectionHidden ? (
+              <EyeOff className="toolbar-icon-active" size={17} aria-hidden="true" />
+            ) : (
+              <Eye size={17} aria-hidden="true" />
+            )}
+          </button>
           <span className="toolbar-separator" />
           <button title="Toggle theme" onClick={toggleTheme}>
             {activeThemeId === "modern-dark" ? (
@@ -216,4 +323,31 @@ export function App() {
       </div>
     </div>
   );
+}
+
+function isTextInputTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  );
+}
+
+function arrowKeyDelta(key: string, step: number): { x: number; y: number } {
+  switch (key) {
+    case "ArrowLeft":
+      return { x: -step, y: 0 };
+    case "ArrowRight":
+      return { x: step, y: 0 };
+    case "ArrowUp":
+      return { x: 0, y: -step };
+    case "ArrowDown":
+      return { x: 0, y: step };
+    default:
+      return { x: 0, y: 0 };
+  }
 }
