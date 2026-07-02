@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "news": {
+      "0.3.1": {
+        "en": "Added responsive preview orientation, multi-select editor actions and AP3 validation hardening.",
+        "de": "Responsive Preview-Ausrichtung, Multi-Select-Editor-Aktionen und AP3-Validierungshaertung ergaenzt.",
+        "ru": "Dobavleny orientatsiya adaptivnogo predprosmotra, deystviya multi-vybora v redaktore i proverki AP3.",
+        "pt": "Adicionada orientacao da pre-visualizacao responsiva, acoes de multi-selecao no editor e validacao AP3.",
+        "nl": "Responsieve preview-orientatie, multi-select editoracties en AP3-validatieharding toegevoegd.",
+        "fr": "Ajout de l'orientation d'apercu responsive, des actions multi-selection de l'editeur et du durcissement AP3.",
+        "it": "Aggiunti orientamento anteprima responsive, azioni multi-selezione dell'editor e validazione AP3.",
+        "es": "Agregada orientacion de vista previa responsive, acciones multi-seleccion del editor y validacion AP3.",
+        "pl": "Dodano orientacje podgladu responsywnego, akcje multiwyboru w edytorze i walidacje AP3.",
+        "uk": "Dodano oriyentatsiyu adaptyvnoho perehlyadu, diyi multi-vyboru v redaktori ta perevirky AP3.",
+        "zh-cn": "Added responsive preview orientation, multi-select editor actions and AP3 validation hardening."
+      },
       "0.3.0": {
         "en": "Editor page management plus snapped palette drag/drop and move/resize handles.",
         "de": "Editor-Seitenverwaltung plus gerastertes Palette-Drag/Drop und Move/Resize-Handles.",
