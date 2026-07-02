@@ -18,6 +18,7 @@ __exportStar(require("./actions/action-engine"), exports);
 __exportStar(require("./components/catalog"), exports);
 __exportStar(require("./formulas/evaluator"), exports);
 __exportStar(require("./schema/defaults"), exports);
+__exportStar(require("./schema/dashboard-id"), exports);
 __exportStar(require("./schema/migrations"), exports);
 __exportStar(require("./schema/types"), exports);
 __exportStar(require("./schema/validation"), exports);

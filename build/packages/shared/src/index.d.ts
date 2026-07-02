@@ -2,6 +2,7 @@ export * from "./actions/action-engine";
 export * from "./components/catalog";
 export * from "./formulas/evaluator";
 export * from "./schema/defaults";
+export * from "./schema/dashboard-id";
 export * from "./schema/migrations";
 export * from "./schema/types";
 export * from "./schema/validation";

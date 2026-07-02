@@ -4,6 +4,7 @@ import {
   type StatePrimitive,
   type StateSnapshot,
 } from "@dashboard-ng/shared";
+import { createDashboardFileUrl } from "./dashboardFile";
 
 interface CommandResponse<T> {
   ok: boolean;
@@ -21,8 +22,14 @@ interface SocketLike {
   ): void;
 }
 
+type SocketFactory = {
+  (url?: string, options?: Record<string, unknown>): SocketLike;
+  connect?: (url?: string, options?: Record<string, unknown>) => SocketLike;
+};
+
 declare global {
   interface Window {
+    io?: SocketFactory;
     socket?: SocketLike;
     adapterInstance?: number;
   }
@@ -30,12 +37,22 @@ declare global {
 
 const PROJECT_KEY = "dashboard-ng.editor.project";
 const STATE_KEY = "dashboard-ng.editor.states";
+const DEFAULT_DASHBOARD_ID = "default";
+let socketPromise: Promise<SocketLike | undefined> | undefined;
 
 export const viewerClient = {
   async loadDashboard(): Promise<DashboardProject> {
-    const response = await sendTo<DashboardProject>("dashboard.load", { dashboardId: "default" });
+    const response = await sendTo<DashboardProject>("dashboard.load", {
+      dashboardId: DEFAULT_DASHBOARD_ID,
+    });
     if (response) {
       return response;
+    }
+
+    const fileDashboard = await loadDashboardFile(DEFAULT_DASHBOARD_ID);
+    if (fileDashboard) {
+      window.localStorage.setItem(PROJECT_KEY, JSON.stringify(fileDashboard));
+      return fileDashboard;
     }
 
     const stored = window.localStorage.getItem(PROJECT_KEY);
@@ -75,7 +92,7 @@ export const viewerClient = {
 };
 
 async function sendTo<T>(command: string, payload: unknown): Promise<T | undefined> {
-  const socket = window.socket;
+  const socket = await resolveSocket();
   if (!socket) {
     return undefined;
   }
@@ -90,6 +107,55 @@ async function sendTo<T>(command: string, payload: unknown): Promise<T | undefin
       resolve(response.data as T);
     });
   });
+}
+
+async function resolveSocket(): Promise<SocketLike | undefined> {
+  if (window.socket) {
+    return window.socket;
+  }
+
+  socketPromise ??= createSocket();
+  return socketPromise;
+}
+
+async function createSocket(): Promise<SocketLike | undefined> {
+  await ensureSocketIoScript();
+  const factory = window.io;
+  if (!factory) {
+    return undefined;
+  }
+
+  const socket = factory.connect ? factory.connect() : factory();
+  window.socket = socket;
+  return socket;
+}
+
+async function ensureSocketIoScript(): Promise<void> {
+  if (window.io) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    const script = document.createElement("script");
+    script.src = "/socket.io/socket.io.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => resolve();
+    document.head.appendChild(script);
+  });
+}
+
+async function loadDashboardFile(dashboardId: string): Promise<DashboardProject | undefined> {
+  try {
+    const url = createDashboardFileUrl(dashboardId, window.location.href, Date.now());
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+      return undefined;
+    }
+    return (await response.json()) as DashboardProject;
+  } catch {
+    return undefined;
+  }
 }
 
 function readInstanceFromQuery(): number | undefined {
