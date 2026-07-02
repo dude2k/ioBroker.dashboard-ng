@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.3",
+    "version": "0.3.4",
     "news": {
+      "0.3.4": {
+        "en": "Fixed Editor saving in ioBroker admin so dashboard changes are written to adapter storage for the Viewer.",
+        "de": "Editor-Speichern im ioBroker-Admin korrigiert, damit Dashboard-Aenderungen in den Adapter-Speicher fuer den Viewer geschrieben werden.",
+        "ru": "Ispravleno sohranenie v redaktore ioBroker admin, chtoby izmeneniya paneli zapisivalis v hranilishche adaptera dlya Viewer.",
+        "pt": "Corrigido o salvamento do Editor no ioBroker admin para gravar mudancas do dashboard no armazenamento do adapter para o Viewer.",
+        "nl": "Opslaan in de Editor binnen ioBroker admin opgelost zodat dashboardwijzigingen naar adapteropslag voor de Viewer gaan.",
+        "fr": "Sauvegarde de l'Editor dans ioBroker admin corrigee pour ecrire les changements du dashboard dans le stockage adapter pour le Viewer.",
+        "it": "Corretto il salvataggio dell'Editor in ioBroker admin per scrivere le modifiche dashboard nello storage adapter per il Viewer.",
+        "es": "Corregido el guardado del Editor en ioBroker admin para escribir cambios del dashboard en el almacenamiento del adapter para el Viewer.",
+        "pl": "Naprawiono zapis Edytora w ioBroker admin, aby zmiany dashboardu trafialy do pamieci adaptera dla Viewera.",
+        "uk": "Vypravleno zberezhennya v Editor u ioBroker admin, shchob zminy dashboard zapysuvalysya v skhovyshche adaptera dlya Viewer.",
+        "zh-cn": "Fixed Editor saving in ioBroker admin so dashboard changes are written to adapter storage for the Viewer."
+      },
       "0.3.3": {
         "en": "Fixed Viewer data loading so the web adapter reads the saved adapter dashboard instead of a stale local fallback.",
         "de": "Viewer-Datenladen korrigiert, damit der Web-Adapter das gespeicherte Adapter-Dashboard statt eines alten lokalen Fallbacks liest.",

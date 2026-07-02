@@ -5,43 +5,32 @@ import {
   type StatePrimitive,
   type StateSnapshot,
 } from "@dashboard-ng/shared";
-
-interface CommandResponse<T> {
-  ok: boolean;
-  data?: T;
-  error?: string;
-}
-
-interface SocketLike {
-  emit(
-    event: "sendTo",
-    instance: string,
-    command: string,
-    payload: unknown,
-    callback: (response: CommandResponse<unknown>) => void,
-  ): void;
-}
-
-declare global {
-  interface Window {
-    socket?: SocketLike;
-    adapterInstance?: number;
-  }
-}
+import { sendIoBrokerCommand } from "@dashboard-ng/runtime";
 
 const STORAGE_KEY = "dashboard-ng.editor.project";
 const STATE_KEY = "dashboard-ng.editor.states";
+const ADAPTER_NAME = "dashboard-ng";
+const DEFAULT_DASHBOARD_ID = "default";
 
 export const dashboardClient = {
   async loadDashboard(): Promise<DashboardProject> {
-    const response = await sendTo<DashboardProject>("dashboard.load", { dashboardId: "default" });
+    const response = await sendTo<DashboardProject>("dashboard.load", {
+      dashboardId: DEFAULT_DASHBOARD_ID,
+    });
     if (response) {
-      return response;
+      const local = readStoredDashboard();
+      const selected = chooseMostRecentDashboard(response, local);
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(selected));
+      return selected;
     }
 
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (!isDemoFallbackAllowed()) {
+      throw new Error("Cannot reach ioBroker adapter. Dashboard was not loaded from adapter.");
+    }
+
+    const stored = readStoredDashboard();
     if (stored) {
-      return JSON.parse(stored) as DashboardProject;
+      return stored;
     }
     const dashboard = createDefaultDashboard();
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(dashboard));
@@ -54,7 +43,12 @@ export const dashboardClient = {
       dashboard,
     });
     if (response) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
       return response;
+    }
+
+    if (!isDemoFallbackAllowed()) {
+      throw new Error("Cannot reach ioBroker adapter. Dashboard was not saved to adapter.");
     }
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(dashboard));
@@ -113,31 +107,38 @@ export const dashboardClient = {
   },
 };
 
-async function sendTo<T>(command: string, payload: unknown): Promise<T | undefined> {
-  const socket = window.socket;
-  if (!socket) {
-    return undefined;
-  }
-
-  const instance = `dashboard-ng.${window.adapterInstance ?? readInstanceFromQuery() ?? 0}`;
-  return new Promise((resolve, reject) => {
-    socket.emit("sendTo", instance, command, payload, (response) => {
-      if (!response?.ok) {
-        reject(new Error(response?.error ?? `Command ${command} failed.`));
-        return;
-      }
-      resolve(response.data as T);
-    });
-  });
+function sendTo<T>(command: string, payload: unknown): Promise<T | undefined> {
+  return sendIoBrokerCommand<T>(ADAPTER_NAME, command, payload);
 }
 
-function readInstanceFromQuery(): number | undefined {
-  const value = new URLSearchParams(window.location.search).get("instance");
-  if (!value) {
-    return undefined;
+function readStoredDashboard(): DashboardProject | undefined {
+  const stored = window.localStorage.getItem(STORAGE_KEY);
+  return stored ? (JSON.parse(stored) as DashboardProject) : undefined;
+}
+
+function chooseMostRecentDashboard(
+  adapterDashboard: DashboardProject,
+  localDashboard: DashboardProject | undefined,
+): DashboardProject {
+  if (!localDashboard || localDashboard.projectId !== adapterDashboard.projectId) {
+    return adapterDashboard;
   }
-  const parsed = Number(value);
-  return Number.isInteger(parsed) ? parsed : undefined;
+
+  const localUpdatedAt = Date.parse(localDashboard.updatedAt);
+  const adapterUpdatedAt = Date.parse(adapterDashboard.updatedAt);
+  if (Number.isFinite(localUpdatedAt) && Number.isFinite(adapterUpdatedAt)) {
+    return localUpdatedAt > adapterUpdatedAt ? localDashboard : adapterDashboard;
+  }
+
+  return adapterDashboard;
+}
+
+function isDemoFallbackAllowed(): boolean {
+  return (
+    import.meta.env.DEV ||
+    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname) ||
+    !window.location.pathname.includes("/adapter/")
+  );
 }
 
 function readMockStates(): Record<string, StatePrimitive> {
