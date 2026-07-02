@@ -129,6 +129,15 @@ button {
   color: var(--accent);
 }
 
+.toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.toolbar-icon-active {
+  color: var(--accent);
+}
+
 .preview-switch .toolbar-separator {
   margin: 0 2px;
 }
@@ -341,6 +350,15 @@ button {
   border-color: var(--warn);
 }
 
+.component-tile.is-editor-hidden .dng-runtime-card {
+  opacity: 0.24;
+  filter: grayscale(0.9);
+}
+
+.component-tile.is-locked .dng-runtime-card {
+  border-style: dashed;
+}
+
 .tile-grip,
 .resize-handle {
   position: absolute;
@@ -376,6 +394,31 @@ button {
   cursor: grabbing;
 }
 
+.tile-grip:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.tile-state-badges {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: flex;
+  gap: 5px;
+  color: var(--accent);
+}
+
+.tile-state-badges svg {
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+}
+
 .resize-handle {
   opacity: 0;
 }
@@ -409,6 +452,28 @@ button {
 .field {
   display: grid;
   gap: 6px;
+}
+
+.inspector-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.inspector-actions button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--panel-strong);
+  cursor: pointer;
+}
+
+.inspector-actions button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .field-label {

@@ -1,4 +1,5 @@
-import { Trash2 } from "lucide-react";
+import { CopyPlus, Eye, EyeOff, Lock, Trash2 } from "lucide-react";
+import { isEditorHidden } from "../lib/componentEditorState";
 import { getComponentBinding, useEditorStore } from "../store/editorStore";
 import { StatePicker } from "./StatePicker";
 
@@ -7,14 +8,55 @@ export function Inspector() {
   const selectedIds = useEditorStore((state) => state.selectedIds);
   const updateComponentProps = useEditorStore((state) => state.updateComponentProps);
   const setPrimaryBinding = useEditorStore((state) => state.setPrimaryBinding);
+  const duplicateSelected = useEditorStore((state) => state.duplicateSelected);
+  const toggleSelectedLock = useEditorStore((state) => state.toggleSelectedLock);
+  const toggleSelectedHidden = useEditorStore((state) => state.toggleSelectedHidden);
   const deleteSelected = useEditorStore((state) => state.deleteSelected);
   const component = project.components.find((item) => item.componentId === selectedIds[0]);
+  const selectedComponents = project.components.filter((item) =>
+    selectedIds.includes(item.componentId),
+  );
 
   if (!component) {
     return (
       <aside className="inspector" aria-label="Inspector">
         <div className="panel-title">Inspector</div>
         <div className="empty-panel">Select a component</div>
+      </aside>
+    );
+  }
+
+  if (selectedComponents.length > 1) {
+    const hasHidden = selectedComponents.some(isEditorHidden);
+    return (
+      <aside className="inspector" aria-label="Inspector">
+        <div className="panel-title">Selection</div>
+        <div className="inspector-stack">
+          <div className="empty-panel">{selectedComponents.length} components selected</div>
+          <div className="inspector-actions">
+            <button title="Duplicate selected" onClick={duplicateSelected}>
+              <CopyPlus size={16} aria-hidden="true" />
+            </button>
+            <button title="Lock selected" onClick={toggleSelectedLock}>
+              <Lock size={16} aria-hidden="true" />
+            </button>
+            <button title="Hide selected" onClick={toggleSelectedHidden}>
+              {hasHidden ? (
+                <EyeOff size={16} aria-hidden="true" />
+              ) : (
+                <Eye size={16} aria-hidden="true" />
+              )}
+            </button>
+          </div>
+          <button
+            className="danger-button"
+            title="Delete selected components"
+            onClick={deleteSelected}
+          >
+            <Trash2 size={16} aria-hidden="true" />
+            <span>Delete</span>
+          </button>
+        </div>
       </aside>
     );
   }

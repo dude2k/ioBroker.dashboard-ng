@@ -5,6 +5,7 @@ import {
   getCatalogEntry,
   type Binding,
   type BindingMode,
+  type DashboardAction,
   type ComponentType,
   type DashboardBreakpoint,
   type DashboardComponent,
@@ -13,6 +14,14 @@ import {
   type Page,
   type StatePrimitive,
 } from "@dashboard-ng/shared";
+import { clampGridPlacement } from "@dashboard-ng/runtime";
+import {
+  clearEditorInteractionFlags,
+  isEditorHidden,
+  isEditorLocked,
+  setEditorHidden,
+  setEditorLocked,
+} from "../lib/componentEditorState";
 import {
   togglePreviewOrientation,
   type PreviewDevice,
@@ -24,6 +33,12 @@ export type PreviewSize = PreviewDevice;
 interface ClipboardData {
   components: DashboardComponent[];
   bindings: Binding[];
+  actions: DashboardAction[];
+}
+
+interface GridDelta {
+  x: number;
+  y: number;
 }
 
 interface EditorState {
@@ -53,6 +68,10 @@ interface EditorState {
   selectComponent(id: string, additive?: boolean): void;
   clearSelection(): void;
   addComponent(type: ComponentType, placement?: GridPlacement): void;
+  duplicateSelected(): void;
+  toggleSelectedLock(): void;
+  toggleSelectedHidden(): void;
+  nudgeSelected(delta: GridDelta, breakpoint?: DashboardBreakpoint, columns?: number): void;
   updateComponentProps(componentId: string, props: Record<string, unknown>): void;
   moveComponent(
     componentId: string,
@@ -438,20 +457,39 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
     const selected = new Set(state.selectedIds);
+    const locked = new Set(
+      state.project.components
+        .filter((component) => selected.has(component.componentId) && isEditorLocked(component))
+        .map((component) => component.componentId),
+    );
+    const deleteIds = new Set([...selected].filter((componentId) => !locked.has(componentId)));
+    if (!deleteIds.size) {
+      set({ status: "Selection locked" });
+      return;
+    }
+
     const nextProject = cloneProject(state.project);
     nextProject.components = nextProject.components.filter(
-      (component) => !selected.has(component.componentId),
+      (component) => !deleteIds.has(component.componentId),
     );
     nextProject.bindings = nextProject.bindings.filter(
-      (binding) => !selected.has(binding.componentId),
+      (binding) => !deleteIds.has(binding.componentId),
     );
-    nextProject.actions = nextProject.actions.filter((action) => !selected.has(action.componentId));
+    nextProject.actions = nextProject.actions.filter(
+      (action) => !deleteIds.has(action.componentId),
+    );
     nextProject.pages = nextProject.pages.map((page) => ({
       ...page,
-      componentIds: page.componentIds.filter((componentId) => !selected.has(componentId)),
+      componentIds: page.componentIds.filter((componentId) => !deleteIds.has(componentId)),
     }));
     nextProject.updatedAt = new Date().toISOString();
-    commit(set, state, nextProject, [], "Selection deleted");
+    commit(
+      set,
+      state,
+      nextProject,
+      state.selectedIds.filter((componentId) => locked.has(componentId)),
+      locked.size ? "Unlocked components deleted" : "Selection deleted",
+    );
   },
 
   copySelected() {
@@ -463,6 +501,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ),
       bindings: cloneJson(
         state.project.bindings.filter((binding) => selected.has(binding.componentId)),
+      ),
+      actions: cloneJson(
+        state.project.actions.filter((action) => selected.has(action.componentId)),
       ),
     };
     set({ status: clipboard.components.length ? "Copied" : "Nothing to copy" });
@@ -476,44 +517,162 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     const nextProject = cloneProject(state.project);
-    const idMap = new Map<string, string>();
-    const pastedComponents = clipboard.components.map((component) => {
-      const nextId = createId("cmp");
-      idMap.set(component.componentId, nextId);
-      const nextComponent = cloneJson(component);
-      nextComponent.componentId = nextId;
-      nextComponent.pageId = page.pageId;
-      nextComponent.bindingIds = [];
-      nextComponent.actionIds = [];
-      Object.values(nextComponent.layout).forEach((placement) => {
-        placement.x += 1;
-        placement.y += 1;
-      });
-      return nextComponent;
+    const pasted = createComponentCopies({
+      components: clipboard.components,
+      bindings: clipboard.bindings,
+      actions: clipboard.actions,
+      pageId: page.pageId,
+      offset: 1,
     });
 
-    const pastedBindings = clipboard.bindings.map((binding) => {
-      const componentId = idMap.get(binding.componentId) ?? binding.componentId;
-      const nextBinding = cloneJson(binding);
-      nextBinding.bindingId = createId("bind");
-      nextBinding.componentId = componentId;
-      const component = pastedComponents.find((item) => item.componentId === componentId);
-      component?.bindingIds.push(nextBinding.bindingId);
-      return nextBinding;
-    });
-
-    nextProject.components.push(...pastedComponents);
-    nextProject.bindings.push(...pastedBindings);
+    nextProject.components.push(...pasted.components);
+    nextProject.bindings.push(...pasted.bindings);
+    nextProject.actions.push(...pasted.actions);
     const nextPage = nextProject.pages.find((candidate) => candidate.pageId === page.pageId);
-    nextPage?.componentIds.push(...pastedComponents.map((component) => component.componentId));
+    nextPage?.componentIds.push(...pasted.components.map((component) => component.componentId));
     nextProject.updatedAt = new Date().toISOString();
     commit(
       set,
       state,
       nextProject,
-      pastedComponents.map((component) => component.componentId),
+      pasted.components.map((component) => component.componentId),
       "Pasted",
     );
+  },
+
+  duplicateSelected() {
+    const state = get();
+    const page = getActivePage(state.project);
+    const selected = new Set(state.selectedIds);
+    const selectedComponents = state.project.components.filter((component) =>
+      selected.has(component.componentId),
+    );
+    if (!page || !selectedComponents.length) {
+      set({ status: "Nothing to duplicate" });
+      return;
+    }
+
+    const duplicated = createComponentCopies({
+      components: selectedComponents,
+      bindings: state.project.bindings.filter((binding) => selected.has(binding.componentId)),
+      actions: state.project.actions.filter((action) => selected.has(action.componentId)),
+      pageId: page.pageId,
+      offset: 1,
+    });
+    const nextProject = cloneProject(state.project);
+
+    nextProject.components.push(...duplicated.components);
+    nextProject.bindings.push(...duplicated.bindings);
+    nextProject.actions.push(...duplicated.actions);
+    const nextPage = nextProject.pages.find((candidate) => candidate.pageId === page.pageId);
+    nextPage?.componentIds.push(...duplicated.components.map((component) => component.componentId));
+    nextProject.updatedAt = new Date().toISOString();
+    commit(
+      set,
+      state,
+      nextProject,
+      duplicated.components.map((component) => component.componentId),
+      "Duplicated",
+    );
+  },
+
+  toggleSelectedLock() {
+    const state = get();
+    const selected = new Set(state.selectedIds);
+    const selectedComponents = state.project.components.filter((component) =>
+      selected.has(component.componentId),
+    );
+    if (!selectedComponents.length) {
+      set({ status: "Nothing selected" });
+      return;
+    }
+
+    const shouldLock = selectedComponents.some((component) => !isEditorLocked(component));
+    const nextProject = cloneProject(state.project);
+    nextProject.components = nextProject.components.map((component) =>
+      selected.has(component.componentId)
+        ? { ...component, style: setEditorLocked(component.style, shouldLock) }
+        : component,
+    );
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, shouldLock ? "Locked" : "Unlocked");
+  },
+
+  toggleSelectedHidden() {
+    const state = get();
+    const selected = new Set(state.selectedIds);
+    const selectedComponents = state.project.components.filter((component) =>
+      selected.has(component.componentId),
+    );
+    if (!selectedComponents.length) {
+      set({ status: "Nothing selected" });
+      return;
+    }
+
+    const shouldHide = selectedComponents.some((component) => !isEditorHidden(component));
+    const nextProject = cloneProject(state.project);
+    nextProject.components = nextProject.components.map((component) =>
+      selected.has(component.componentId)
+        ? { ...component, style: setEditorHidden(component.style, shouldHide) }
+        : component,
+    );
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, shouldHide ? "Hidden" : "Shown");
+  },
+
+  nudgeSelected(delta, breakpoint, columns) {
+    const state = get();
+    const selected = new Set(state.selectedIds);
+    if (!selected.size) {
+      return;
+    }
+
+    const targetBreakpoint = breakpoint ?? state.preview;
+    let changed = false;
+    const nextProject = cloneProject(state.project);
+
+    nextProject.components = nextProject.components.map((component) => {
+      if (!selected.has(component.componentId) || isEditorLocked(component)) {
+        return component;
+      }
+
+      const placement = getPlacement(component, targetBreakpoint);
+      const nextPlacement = columns
+        ? clampGridPlacement(
+            { ...placement, x: placement.x + delta.x, y: placement.y + delta.y },
+            columns,
+          )
+        : {
+            ...placement,
+            x: Math.max(0, placement.x + delta.x),
+            y: Math.max(0, placement.y + delta.y),
+          };
+      if (
+        nextPlacement.x === placement.x &&
+        nextPlacement.y === placement.y &&
+        nextPlacement.w === placement.w &&
+        nextPlacement.h === placement.h
+      ) {
+        return component;
+      }
+
+      changed = true;
+      return {
+        ...component,
+        layout: {
+          ...component.layout,
+          [targetBreakpoint]: nextPlacement,
+        },
+      };
+    });
+
+    if (!changed) {
+      set({ status: "Selection locked" });
+      return;
+    }
+
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Layout updated");
   },
 
   undo() {
@@ -569,6 +728,81 @@ export function getPlacement(
     component.layout.tablet ??
     component.layout.phone ?? { x: 0, y: 0, w: 2, h: 2 }
   );
+}
+
+interface ComponentCopyInput {
+  components: DashboardComponent[];
+  bindings: Binding[];
+  actions: DashboardAction[];
+  pageId: string;
+  offset: number;
+}
+
+interface ComponentCopyResult {
+  components: DashboardComponent[];
+  bindings: Binding[];
+  actions: DashboardAction[];
+}
+
+function createComponentCopies(input: ComponentCopyInput): ComponentCopyResult {
+  const componentIdMap = new Map<string, string>();
+  const bindingIdMap = new Map<string, string>();
+  const actionIdMap = new Map<string, string>();
+
+  const components = input.components.map((component) => {
+    const nextComponent = cloneJson(component);
+    const nextComponentId = createId("cmp");
+    componentIdMap.set(component.componentId, nextComponentId);
+    nextComponent.componentId = nextComponentId;
+    nextComponent.pageId = input.pageId;
+    nextComponent.name = `${component.name} Copy`;
+    nextComponent.bindingIds = [];
+    nextComponent.actionIds = [];
+    nextComponent.style = clearEditorInteractionFlags(nextComponent.style);
+    Object.values(nextComponent.layout).forEach((placement) => {
+      placement.x += input.offset;
+      placement.y += input.offset;
+    });
+    return nextComponent;
+  });
+
+  const bindings = input.bindings
+    .filter((binding) => componentIdMap.has(binding.componentId))
+    .map((binding) => {
+      const nextBinding = cloneJson(binding);
+      const nextBindingId = createId("bind");
+      nextBinding.bindingId = nextBindingId;
+      nextBinding.componentId = componentIdMap.get(binding.componentId) ?? binding.componentId;
+      bindingIdMap.set(binding.bindingId, nextBindingId);
+      return nextBinding;
+    });
+
+  const actions = input.actions
+    .filter((action) => componentIdMap.has(action.componentId))
+    .map((action) => {
+      const nextAction = cloneJson(action);
+      const nextActionId = createId("act");
+      nextAction.actionId = nextActionId;
+      nextAction.componentId = componentIdMap.get(action.componentId) ?? action.componentId;
+      actionIdMap.set(action.actionId, nextActionId);
+      return nextAction;
+    });
+
+  components.forEach((component) => {
+    const sourceComponent = input.components.find(
+      (source) => componentIdMap.get(source.componentId) === component.componentId,
+    );
+    component.bindingIds =
+      sourceComponent?.bindingIds
+        .map((bindingId) => bindingIdMap.get(bindingId))
+        .filter((bindingId): bindingId is string => Boolean(bindingId)) ?? [];
+    component.actionIds =
+      sourceComponent?.actionIds
+        .map((actionId) => actionIdMap.get(actionId))
+        .filter((actionId): actionId is string => Boolean(actionId)) ?? [];
+  });
+
+  return { components, bindings, actions };
 }
 
 function commit(

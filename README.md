@@ -75,8 +75,9 @@ The Editor contains a component palette, page management, responsive grid
 canvas, state picker and property inspector. Palette cards can be dragged onto
 the canvas with a snapped drop preview based on the component default size.
 Selected cards can be moved and resized on the grid through editor handles. It
-supports undo/redo, copy/paste, import/export and preview sizes for phone,
-tablet, desktop and wall panel, each with portrait and landscape orientation.
+supports multi-select, duplicate, lock, editor-hide, undo/redo, copy/paste,
+import/export and preview sizes for phone, tablet, desktop and wall panel, each
+with portrait and landscape orientation.
 
 ## Viewer
 
@@ -164,6 +165,8 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 
 - Added portrait/landscape responsive preview frames for phone, tablet, desktop
   and wall panel modes.
+- Added multi-select editor actions for duplicate, lock, editor-hide, delete
+  and keyboard nudging.
 
 ### 0.3.0 (2026-07-01)
 
