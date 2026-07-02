@@ -4,7 +4,7 @@ Modern responsive dashboards for ioBroker.
 
 ## Project Status
 
-**Dashboard-NG is not finished yet.** Version `0.3.5` is an installable alpha
+**Dashboard-NG is not finished yet.** Version `0.3.6` is an installable alpha
 baseline for early testing and development. The adapter can be installed from
 GitHub and an instance can run, but the complete MVP feature set from
 `docs/MVP_COMPLETION_TASK.md` is still in progress.
@@ -14,8 +14,8 @@ changes and possible breaking changes before a stable `1.0.0` release.
 
 ## Version
 
-- Current adapter version: `0.3.5`
-- Current GitHub tag: `v0.3.5`
+- Current adapter version: `0.3.6`
+- Current GitHub tag: `v0.3.6`
 - Release status: alpha / installable MVP foundation
 - Versioning scheme: SemVer-style package versions and Git tags named
   `vX.Y.Z`
@@ -161,6 +161,15 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 
 ## Changelog
 
+### 0.3.6 (2026-07-02)
+
+- Enabled ioBroker `sendTo` message support through `supportedMessages.custom`
+  so Editor and Viewer commands reach the adapter instance.
+- Made Editor saves always target the default dashboard file that the Viewer
+  loads, avoiding split storage after imports or local browser fallbacks.
+- In production, the Editor now trusts the adapter dashboard over local browser
+  copies when loading.
+
 ### 0.3.5 (2026-07-02)
 
 - Added robust ioBroker socket transport for both `socket.sendTo` and raw
@@ -243,7 +252,7 @@ Dashboards. Nutzer sollen ohne HTML, CSS oder JavaScript schoene Dashboards
 erstellen koennen. Der MVP konzentriert sich auf Editor, Viewer, Grid-Layout,
 State-Binding, sichere Formeln, Import/Export, Themes und stabile Migrationen.
 
-Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.3.5` ist eine
+Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.3.6` ist eine
 installierbare Alpha-Grundlage fuer Tests und Weiterentwicklung, aber noch keine
 stabile Produktivversion.
 

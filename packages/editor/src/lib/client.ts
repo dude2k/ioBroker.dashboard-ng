@@ -18,8 +18,9 @@ export const dashboardClient = {
       dashboardId: DEFAULT_DASHBOARD_ID,
     });
     if (response) {
-      const local = readStoredDashboard();
-      const selected = chooseMostRecentDashboard(response, local);
+      const selected = isDemoFallbackAllowed()
+        ? chooseMostRecentDashboard(response, readStoredDashboard())
+        : response;
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(selected));
       return selected;
     }
@@ -39,7 +40,7 @@ export const dashboardClient = {
 
   async saveDashboard(dashboard: DashboardProject): Promise<DashboardProject> {
     const response = await sendTo<DashboardProject>("dashboard.save", {
-      dashboardId: dashboard.projectId,
+      dashboardId: DEFAULT_DASHBOARD_ID,
       dashboard,
     });
     if (response) {

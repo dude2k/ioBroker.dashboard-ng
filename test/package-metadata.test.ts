@@ -13,10 +13,10 @@ const adminIndexRedirect = readFileSync(
 
 describe("adapter package metadata", () => {
   it("keeps package and adapter versions aligned", () => {
-    expect(packageJson.version).toBe("0.3.5");
+    expect(packageJson.version).toBe("0.3.6");
     expect(ioPackageJson.common.version).toBe(packageJson.version);
-    expect(readme).toContain("Current adapter version: `0.3.5`");
-    expect(readme).toContain("Current GitHub tag: `v0.3.5`");
+    expect(readme).toContain("Current adapter version: `0.3.6`");
+    expect(readme).toContain("Current GitHub tag: `v0.3.6`");
   });
 
   it("keeps adapter naming stable for GitHub installs", () => {
@@ -39,6 +39,10 @@ describe("adapter package metadata", () => {
     expect(ioPackageJson.common.localLinks._default).toContain("/dashboard-ng/index.html");
     expect(ioPackageJson.common.localLinks._default).not.toContain("/adapter/dashboard-ng/");
     expect(packageJson.files).toContain("www");
+  });
+
+  it("declares custom sendTo message support for frontend commands", () => {
+    expect(ioPackageJson.common.supportedMessages).toEqual({ custom: true });
   });
 
   it("keeps old adapter namespace viewer bookmarks from returning a 404", () => {
