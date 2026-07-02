@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.6",
+    "version": "0.3.7",
     "news": {
+      "0.3.7": {
+        "en": "Fixed Editor save confirmation handling and added legacy messagebox metadata for ioBroker sendTo compatibility.",
+        "de": "Editor-Speicherbestaetigung korrigiert und Legacy-messagebox-Metadaten fuer ioBroker-sendTo-Kompatibilitaet ergaenzt.",
+        "ru": "Ispravlena obrabotka podtverzhdeniya sohraneniya v Editor i dobavleny legacy messagebox metadannye dlya ioBroker sendTo.",
+        "pt": "Corrigida a confirmacao de salvamento do Editor e adicionados metadados legacy messagebox para compatibilidade ioBroker sendTo.",
+        "nl": "Editor-savebevestiging opgelost en legacy messagebox-metadata toegevoegd voor ioBroker sendTo-compatibiliteit.",
+        "fr": "Confirmation de sauvegarde Editor corrigee et metadonnees legacy messagebox ajoutees pour compatibilite ioBroker sendTo.",
+        "it": "Corretta la conferma di salvataggio Editor e aggiunti metadati legacy messagebox per compatibilita ioBroker sendTo.",
+        "es": "Corregida la confirmacion de guardado del Editor y agregados metadatos legacy messagebox para compatibilidad ioBroker sendTo.",
+        "pl": "Naprawiono potwierdzanie zapisu Edytora i dodano legacy messagebox metadata dla zgodnosci ioBroker sendTo.",
+        "uk": "Vypravleno pidtverdzhennya zberezhennya Editor i dodano legacy messagebox metadata dlya sumisnosti ioBroker sendTo.",
+        "zh-cn": "Fixed Editor save confirmation handling and added legacy messagebox metadata for ioBroker sendTo compatibility."
+      },
       "0.3.6": {
         "en": "Enabled ioBroker sendTo message support and made Editor saves target the Viewer dashboard consistently.",
         "de": "ioBroker-sendTo-Nachrichten aktiviert und Editor-Speichern konsistent auf das Viewer-Dashboard ausgerichtet.",
@@ -191,6 +204,7 @@
     "compact": true,
     "connectionType": "local",
     "dataSource": "push",
+    "messagebox": true,
     "supportedMessages": {
       "custom": true
     },

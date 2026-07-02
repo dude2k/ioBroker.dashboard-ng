@@ -53,11 +53,17 @@ export async function sendIoBrokerCommand<T>(
 
   const instance = `${adapterName}.${readIoBrokerAdapterInstance(adapterName) ?? 0}`;
   return new Promise((resolve, reject) => {
+    let settled = false;
     const timeout = window.setTimeout(() => {
+      settled = true;
       reject(new Error(`Command ${command} timed out.`));
     }, 8000);
 
     const done = (response: unknown) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
       window.clearTimeout(timeout);
       const normalized = normalizeResponse<T>(response);
       if (!normalized.ok) {
@@ -71,16 +77,27 @@ export async function sendIoBrokerCommand<T>(
       if (typeof socket.sendTo === "function") {
         const result = socket.sendTo(instance, command, payload, done);
         if (result && typeof result.then === "function") {
-          result.then(done).catch((error: unknown) => {
-            window.clearTimeout(timeout);
-            reject(error instanceof Error ? error : new Error(String(error)));
-          });
+          result
+            .then((response: unknown) => {
+              if (response !== undefined) {
+                done(response);
+              }
+            })
+            .catch((error: unknown) => {
+              if (settled) {
+                return;
+              }
+              settled = true;
+              window.clearTimeout(timeout);
+              reject(error instanceof Error ? error : new Error(String(error)));
+            });
         }
         return;
       }
 
       socket.emit("sendTo", instance, command, payload, done);
     } catch (error) {
+      settled = true;
       window.clearTimeout(timeout);
       reject(error instanceof Error ? error : new Error(String(error)));
     }

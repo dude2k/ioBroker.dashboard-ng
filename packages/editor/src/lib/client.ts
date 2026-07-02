@@ -49,7 +49,7 @@ export const dashboardClient = {
     }
 
     if (!isDemoFallbackAllowed()) {
-      throw new Error("Cannot reach ioBroker adapter. Dashboard was not saved to adapter.");
+      throw new Error("Adapter did not confirm the save. Dashboard was not saved to adapter.");
     }
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(dashboard));

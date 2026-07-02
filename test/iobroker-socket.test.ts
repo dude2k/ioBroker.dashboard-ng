@@ -1,7 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { parseIoBrokerAdapterInstance } from "../packages/runtime/src/iobrokerSocket";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  parseIoBrokerAdapterInstance,
+  sendIoBrokerCommand,
+  type IoBrokerSocketLike,
+} from "../packages/runtime/src/iobrokerSocket";
 
 describe("ioBroker socket helpers", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("reads explicit instance query parameters", () => {
     expect(
       parseIoBrokerAdapterInstance(
@@ -30,5 +38,31 @@ describe("ioBroker socket helpers", () => {
         "dashboard-ng",
       ),
     ).toBe(3);
+  });
+
+  it("waits for callback responses when socket.sendTo returns an empty promise", async () => {
+    const socket: IoBrokerSocketLike = {
+      sendTo: (_instance, _command, _payload, callback) => {
+        setTimeout(() => callback?.({ ok: true, data: "saved" }), 0);
+        return Promise.resolve(undefined);
+      },
+      emit: vi.fn(),
+    };
+    const fakeWindow = {
+      location: {
+        href: "http://example.local/adapter/dashboard-ng/index_m.html?0",
+        search: "?0",
+      },
+      socket,
+      setTimeout: globalThis.setTimeout.bind(globalThis),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+    } as unknown as Window & { socket: IoBrokerSocketLike };
+    fakeWindow.parent = fakeWindow;
+    fakeWindow.top = fakeWindow;
+    vi.stubGlobal("window", fakeWindow);
+
+    await expect(sendIoBrokerCommand<string>("dashboard-ng", "dashboard.save", {})).resolves.toBe(
+      "saved",
+    );
   });
 });

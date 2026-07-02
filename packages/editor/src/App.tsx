@@ -73,7 +73,7 @@ export function App() {
     dashboardClient
       .loadDashboard()
       .then((dashboard) => setProject(dashboard, "Loaded"))
-      .catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+      .catch((error) => setStatus(`Load failed: ${readErrorMessage(error)}`));
   }, [setProject, setStatus]);
 
   useEffect(() => {
@@ -174,10 +174,11 @@ export function App() {
 
   async function saveDashboard() {
     try {
+      setStatus("Saving...");
       const saved = await dashboardClient.saveDashboard(project);
       setProject(saved, "Saved");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : String(error));
+      setStatus(`Save failed: ${readErrorMessage(error)}`);
     }
   }
 
@@ -226,7 +227,7 @@ export function App() {
           <img src="./dashboard-ng.svg" alt="" />
           <div>
             <strong>Dashboard-NG</strong>
-            <span>{dirty ? "Unsaved" : status}</span>
+            <span>{formatEditorStatus(dirty, status)}</span>
           </div>
         </div>
 
@@ -335,6 +336,21 @@ function isTextInputTarget(target: EventTarget | null): boolean {
     target instanceof HTMLTextAreaElement ||
     target instanceof HTMLSelectElement
   );
+}
+
+function formatEditorStatus(dirty: boolean, status: string): string {
+  if (!dirty || isImportantStatus(status)) {
+    return status;
+  }
+  return "Unsaved";
+}
+
+function isImportantStatus(status: string): boolean {
+  return /failed|cannot|timed out|validation|blocked|error/i.test(status);
+}
+
+function readErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function arrowKeyDelta(key: string, step: number): { x: number; y: number } {

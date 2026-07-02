@@ -25,8 +25,9 @@ The backend uses `@iobroker/adapter-core` and owns:
 - Future asset and template storage.
 
 Frontend communication is command-based through ioBroker `sendTo` messages. The
-adapter declares `common.supportedMessages.custom` so ioBroker creates the
-adapter messagebox needed for these commands:
+adapter declares `common.supportedMessages.custom` and the legacy
+`common.messagebox` flag so ioBroker creates the adapter messagebox needed for
+these commands:
 
 - `dashboard.load`
 - `dashboard.save`

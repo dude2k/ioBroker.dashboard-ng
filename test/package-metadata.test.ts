@@ -13,10 +13,10 @@ const adminIndexRedirect = readFileSync(
 
 describe("adapter package metadata", () => {
   it("keeps package and adapter versions aligned", () => {
-    expect(packageJson.version).toBe("0.3.6");
+    expect(packageJson.version).toBe("0.3.7");
     expect(ioPackageJson.common.version).toBe(packageJson.version);
-    expect(readme).toContain("Current adapter version: `0.3.6`");
-    expect(readme).toContain("Current GitHub tag: `v0.3.6`");
+    expect(readme).toContain("Current adapter version: `0.3.7`");
+    expect(readme).toContain("Current GitHub tag: `v0.3.7`");
   });
 
   it("keeps adapter naming stable for GitHub installs", () => {
@@ -42,6 +42,7 @@ describe("adapter package metadata", () => {
   });
 
   it("declares custom sendTo message support for frontend commands", () => {
+    expect(ioPackageJson.common.messagebox).toBe(true);
     expect(ioPackageJson.common.supportedMessages).toEqual({ custom: true });
   });
 
