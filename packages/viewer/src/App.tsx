@@ -1,7 +1,6 @@
 import { Expand, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { DashboardProject } from "@dashboard-ng/shared";
-import { createDefaultDashboard } from "@dashboard-ng/shared";
 import {
   clampGridPlacement,
   DashboardRuntimeCard,
@@ -19,23 +18,25 @@ type WakeLockSentinel = {
 };
 
 export function ViewerApp() {
-  const [project, setProject] = useState<DashboardProject>(() => createDefaultDashboard());
+  const [project, setProject] = useState<DashboardProject | undefined>();
   const [stateValues, setStateValues] = useState<RuntimeStateValues>({});
   const [online, setOnline] = useState(true);
+  const [loadError, setLoadError] = useState<string | undefined>();
   const [burnInOffset, setBurnInOffset] = useState({ x: 0, y: 0 });
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | undefined>();
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === "undefined" ? 1024 : window.innerWidth,
   );
-  const page =
-    project.pages.find((candidate) => candidate.pageId === project.settings.activePageId) ??
-    project.pages[0];
-  const activeTheme = project.themes.find(
-    (theme) => theme.themeId === project.settings.activeThemeId,
-  );
-  const components = page
-    ? project.components.filter((component) => component.pageId === page.pageId)
-    : [];
+  const page = project
+    ? (project.pages.find((candidate) => candidate.pageId === project.settings.activePageId) ??
+      project.pages[0])
+    : undefined;
+  const activeThemeId = project?.settings.activeThemeId;
+  const activeTheme = project?.themes.find((theme) => theme.themeId === activeThemeId);
+  const components =
+    project && page
+      ? project.components.filter((component) => component.pageId === page.pageId)
+      : [];
   const breakpoint = resolveRuntimeBreakpoint(viewportWidth);
   const columns = runtimeColumns[breakpoint];
   const cell = runtimeCellSize[breakpoint];
@@ -46,12 +47,12 @@ export function ViewerApp() {
     () =>
       Array.from(
         new Set(
-          project.bindings
+          (project?.bindings ?? [])
             .map((binding) => binding.stateId)
             .filter((id): id is string => Boolean(id)),
         ),
       ),
-    [project.bindings],
+    [project?.bindings],
   );
 
   useEffect(() => {
@@ -60,8 +61,12 @@ export function ViewerApp() {
       .then((dashboard) => {
         setProject(dashboard);
         setOnline(true);
+        setLoadError(undefined);
       })
-      .catch(() => setOnline(false));
+      .catch((error) => {
+        setOnline(false);
+        setLoadError(error instanceof Error ? error.message : String(error));
+      });
   }, []);
 
   useEffect(() => {
@@ -100,7 +105,7 @@ export function ViewerApp() {
   }, [stateIds]);
 
   useEffect(() => {
-    if (!project.settings.burnInProtection) {
+    if (!project?.settings.burnInProtection) {
       return;
     }
     const interval = window.setInterval(() => {
@@ -108,7 +113,7 @@ export function ViewerApp() {
       setBurnInOffset({ x: (step - 2) * 2, y: (((step + 1) % 5) - 2) * 2 });
     }, 30000);
     return () => window.clearInterval(interval);
-  }, [project.settings.burnInProtection]);
+  }, [project?.settings.burnInProtection]);
 
   async function requestWakeLock() {
     const navigatorWithWakeLock = navigator as Navigator & {
@@ -132,8 +137,10 @@ export function ViewerApp() {
     try {
       setProject(await viewerClient.loadDashboard());
       setOnline(true);
+      setLoadError(undefined);
     } catch {
       setOnline(false);
+      setLoadError("Dashboard could not be loaded");
     }
   }
 
@@ -153,7 +160,7 @@ export function ViewerApp() {
     >
       <header className="viewer-top">
         <div>
-          <strong>{project.name}</strong>
+          <strong>{project?.name ?? "Dashboard-NG"}</strong>
           <span>{online ? (page?.name ?? "Dashboard") : "Reconnecting"}</span>
         </div>
         <nav>
@@ -167,57 +174,69 @@ export function ViewerApp() {
       </header>
 
       {!online ? <div className="connection-hint">Connection interrupted</div> : null}
+      {!project ? (
+        <div className="viewer-empty">
+          <strong>Dashboard not loaded</strong>
+          <span>{loadError ?? "Waiting for adapter storage"}</span>
+        </div>
+      ) : null}
 
-      <main
-        className={`viewer-grid viewer-grid-${breakpoint}`}
-        style={{
-          gridAutoRows: cell,
-          gridTemplateColumns: `repeat(${columns}, ${cell}px)`,
-          minHeight: gridHeight,
-          width: columns * cell,
-        }}
-      >
-        {components.map((component) => {
-          const placement = clampGridPlacement(
-            resolveComponentPlacement(component, breakpoint),
-            columns,
-          );
-          const bindings = project.bindings.filter(
-            (binding) => binding.componentId === component.componentId,
-          );
-          const actions = project.actions.filter(
-            (action) => action.componentId === component.componentId,
-          );
-          return (
-            <section
-              className="viewer-tile"
-              key={component.componentId}
-              style={{
-                gridColumn: `${placement.x + 1} / span ${placement.w}`,
-                gridRow: `${placement.y + 1} / span ${placement.h}`,
-              }}
-            >
-              <DashboardRuntimeCard
-                actions={actions}
-                bindings={bindings}
-                component={component}
-                mode="viewer"
-                stateValues={stateValues}
-                onLocalStateChange={(stateId, nextValue) => {
-                  setStateValues((current) => ({ ...current, [stateId]: nextValue }));
+      {project ? (
+        <main
+          className={`viewer-grid viewer-grid-${breakpoint}`}
+          style={{
+            gridAutoRows: cell,
+            gridTemplateColumns: `repeat(${columns}, ${cell}px)`,
+            minHeight: gridHeight,
+            width: columns * cell,
+          }}
+        >
+          {components.map((component) => {
+            const placement = clampGridPlacement(
+              resolveComponentPlacement(component, breakpoint),
+              columns,
+            );
+            const bindings = project.bindings.filter(
+              (binding) => binding.componentId === component.componentId,
+            );
+            const actions = project.actions.filter(
+              (action) => action.componentId === component.componentId,
+            );
+            return (
+              <section
+                className="viewer-tile"
+                key={component.componentId}
+                style={{
+                  gridColumn: `${placement.x + 1} / span ${placement.w}`,
+                  gridRow: `${placement.y + 1} / span ${placement.h}`,
                 }}
-                onNavigate={(pageId) => {
-                  setProject((current) => ({
-                    ...current,
-                    settings: { ...current.settings, activePageId: pageId },
-                  }));
-                }}
-                onWriteState={(stateId, value) => viewerClient.writeState(stateId, value)}
-              />
-            </section>
-          );
-        })}
-      </main>
+              >
+                <DashboardRuntimeCard
+                  actions={actions}
+                  bindings={bindings}
+                  component={component}
+                  mode="viewer"
+                  stateValues={stateValues}
+                  onLocalStateChange={(stateId, nextValue) => {
+                    setStateValues((current) => ({ ...current, [stateId]: nextValue }));
+                  }}
+                  onNavigate={(pageId) => {
+                    setProject((current) =>
+                      current
+                        ? {
+                            ...current,
+                            settings: { ...current.settings, activePageId: pageId },
+                          }
+                        : current,
+                    );
+                  }}
+                  onWriteState={(stateId, value) => viewerClient.writeState(stateId, value)}
+                />
+              </section>
+            );
+          })}
+        </main>
+      ) : null}
     </div>
   );
 }
