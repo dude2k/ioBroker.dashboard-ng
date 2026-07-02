@@ -37,6 +37,11 @@ these commands:
 - `states.read`
 - `state.write`
 
+Dashboard load/save additionally uses ioBroker adapter file storage directly as
+the first path. The Editor writes `dashboard-ng/dashboards/default.json` through
+the socket file API, and the Viewer reads the same file from the web adapter
+namespace before falling back to `dashboard.load`.
+
 ## Editor Frontend
 
 The Editor is a React/Vite app. It provides:

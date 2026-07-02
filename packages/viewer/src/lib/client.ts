@@ -14,17 +14,17 @@ const DEFAULT_DASHBOARD_ID = "default";
 
 export const viewerClient = {
   async loadDashboard(): Promise<DashboardProject> {
+    const fileDashboard = await loadDashboardFile(DEFAULT_DASHBOARD_ID);
+    if (fileDashboard) {
+      window.localStorage.setItem(PROJECT_KEY, JSON.stringify(fileDashboard));
+      return fileDashboard;
+    }
+
     const response = await sendTo<DashboardProject>("dashboard.load", {
       dashboardId: DEFAULT_DASHBOARD_ID,
     });
     if (response) {
       return response;
-    }
-
-    const fileDashboard = await loadDashboardFile(DEFAULT_DASHBOARD_ID);
-    if (fileDashboard) {
-      window.localStorage.setItem(PROJECT_KEY, JSON.stringify(fileDashboard));
-      return fileDashboard;
     }
 
     if (isDemoFallbackAllowed()) {

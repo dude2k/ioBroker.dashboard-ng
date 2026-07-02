@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readIoBrokerFile, writeIoBrokerFile } from "../packages/runtime/src/iobrokerFiles";
 import {
   parseIoBrokerAdapterInstance,
   sendIoBrokerCommand,
@@ -65,4 +66,55 @@ describe("ioBroker socket helpers", () => {
       "saved",
     );
   });
+
+  it("reads adapter files through the ioBroker socket file API", async () => {
+    const socket: IoBrokerSocketLike = {
+      readFile: (_adapterName, _path, callback) => {
+        callback?.(null, '{"projectId":"default"}');
+      },
+      emit: vi.fn(),
+    };
+    stubSocketWindow(socket);
+
+    await expect(readIoBrokerFile("dashboard-ng", "dashboards/default.json")).resolves.toBe(
+      '{"projectId":"default"}',
+    );
+  });
+
+  it("writes adapter files through the ioBroker socket file API", async () => {
+    const writes: Array<{ adapterName: string | null; path: string; data: string }> = [];
+    const socket: IoBrokerSocketLike = {
+      writeFile: (adapterName, path, data, callback) => {
+        writes.push({ adapterName, path, data });
+        callback?.(null);
+      },
+      emit: vi.fn(),
+    };
+    stubSocketWindow(socket);
+
+    await writeIoBrokerFile("dashboard-ng", "dashboards/default.json", '{"ok":true}');
+
+    expect(writes).toEqual([
+      {
+        adapterName: "dashboard-ng",
+        path: "dashboards/default.json",
+        data: '{"ok":true}',
+      },
+    ]);
+  });
 });
+
+function stubSocketWindow(socket: IoBrokerSocketLike): void {
+  const fakeWindow = {
+    location: {
+      href: "http://example.local/adapter/dashboard-ng/index_m.html?0",
+      search: "?0",
+    },
+    socket,
+    setTimeout: globalThis.setTimeout.bind(globalThis),
+    clearTimeout: globalThis.clearTimeout.bind(globalThis),
+  } as unknown as Window & { socket: IoBrokerSocketLike };
+  fakeWindow.parent = fakeWindow;
+  fakeWindow.top = fakeWindow;
+  vi.stubGlobal("window", fakeWindow);
+}

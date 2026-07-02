@@ -1,11 +1,14 @@
 import {
   createDefaultDashboard,
+  migrateDashboardProject,
+  sanitizeDashboardFilePart,
+  validateDashboardProject,
   type DashboardProject,
   type StateOption,
   type StatePrimitive,
   type StateSnapshot,
 } from "@dashboard-ng/shared";
-import { sendIoBrokerCommand } from "@dashboard-ng/runtime";
+import { readIoBrokerFile, sendIoBrokerCommand, writeIoBrokerFile } from "@dashboard-ng/runtime";
 
 const STORAGE_KEY = "dashboard-ng.editor.project";
 const STATE_KEY = "dashboard-ng.editor.states";
@@ -14,7 +17,13 @@ const DEFAULT_DASHBOARD_ID = "default";
 
 export const dashboardClient = {
   async loadDashboard(): Promise<DashboardProject> {
-    const response = await sendTo<DashboardProject>("dashboard.load", {
+    const fileDashboard = await loadDashboardFile(DEFAULT_DASHBOARD_ID);
+    if (fileDashboard) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fileDashboard));
+      return fileDashboard;
+    }
+
+    const response = await sendToSilently<DashboardProject>("dashboard.load", {
       dashboardId: DEFAULT_DASHBOARD_ID,
     });
     if (response) {
@@ -26,7 +35,14 @@ export const dashboardClient = {
     }
 
     if (!isDemoFallbackAllowed()) {
-      throw new Error("Cannot reach ioBroker adapter. Dashboard was not loaded from adapter.");
+      const dashboard = createDefaultDashboard({ projectId: DEFAULT_DASHBOARD_ID });
+      try {
+        const saved = await saveDashboardFile(DEFAULT_DASHBOARD_ID, dashboard);
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        return saved;
+      } catch {
+        throw new Error("Cannot load dashboard from ioBroker adapter storage.");
+      }
     }
 
     const stored = readStoredDashboard();
@@ -39,7 +55,16 @@ export const dashboardClient = {
   },
 
   async saveDashboard(dashboard: DashboardProject): Promise<DashboardProject> {
-    const response = await sendTo<DashboardProject>("dashboard.save", {
+    let fileError: unknown;
+    try {
+      const saved = await saveDashboardFile(DEFAULT_DASHBOARD_ID, dashboard);
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      return saved;
+    } catch (error) {
+      fileError = error;
+    }
+
+    const response = await sendToSilently<DashboardProject>("dashboard.save", {
       dashboardId: DEFAULT_DASHBOARD_ID,
       dashboard,
     });
@@ -49,7 +74,7 @@ export const dashboardClient = {
     }
 
     if (!isDemoFallbackAllowed()) {
-      throw new Error("Adapter did not confirm the save. Dashboard was not saved to adapter.");
+      throw new Error(`Dashboard was not saved to adapter storage: ${readError(fileError)}`);
     }
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(dashboard));
@@ -57,7 +82,7 @@ export const dashboardClient = {
   },
 
   async searchObjects(query: string): Promise<StateOption[]> {
-    const response = await sendTo<StateOption[]>("objects.search", { query, limit: 80 });
+    const response = await sendToSilently<StateOption[]>("objects.search", { query, limit: 80 });
     if (response) {
       return response;
     }
@@ -72,7 +97,7 @@ export const dashboardClient = {
   },
 
   async readStates(stateIds: string[]): Promise<StateSnapshot[]> {
-    const response = await sendTo<StateSnapshot[]>("states.read", { stateIds });
+    const response = await sendToSilently<StateSnapshot[]>("states.read", { stateIds });
     if (response) {
       return response;
     }
@@ -89,7 +114,7 @@ export const dashboardClient = {
   },
 
   async writeState(stateId: string, value: StatePrimitive): Promise<StateSnapshot> {
-    const response = await sendTo<StateSnapshot>("state.write", { stateId, value });
+    const response = await sendToSilently<StateSnapshot>("state.write", { stateId, value });
     if (response) {
       return response;
     }
@@ -110,6 +135,57 @@ export const dashboardClient = {
 
 function sendTo<T>(command: string, payload: unknown): Promise<T | undefined> {
   return sendIoBrokerCommand<T>(ADAPTER_NAME, command, payload);
+}
+
+async function sendToSilently<T>(command: string, payload: unknown): Promise<T | undefined> {
+  try {
+    return await sendTo<T>(command, payload);
+  } catch {
+    return undefined;
+  }
+}
+
+async function loadDashboardFile(dashboardId: string): Promise<DashboardProject | undefined> {
+  try {
+    const raw = await readIoBrokerFile(ADAPTER_NAME, dashboardFileName(dashboardId));
+    if (!raw) {
+      return undefined;
+    }
+    return migrateDashboardProject(JSON.parse(raw)).project;
+  } catch {
+    return undefined;
+  }
+}
+
+async function saveDashboardFile(
+  dashboardId: string,
+  dashboard: DashboardProject,
+): Promise<DashboardProject> {
+  const next: DashboardProject = {
+    ...dashboard,
+    projectId: dashboard.projectId || dashboardId,
+    updatedAt: new Date().toISOString(),
+  };
+  const validation = validateDashboardProject(next);
+  if (!validation.valid) {
+    throw new Error(
+      `Dashboard validation failed: ${validation.issues.map((issue) => issue.message).join("; ")}`,
+    );
+  }
+  await writeIoBrokerFile(
+    ADAPTER_NAME,
+    dashboardFileName(dashboardId),
+    `${JSON.stringify(next, null, 2)}\n`,
+  );
+  return next;
+}
+
+function dashboardFileName(dashboardId: string): string {
+  return `dashboards/${sanitizeDashboardFilePart(dashboardId)}.json`;
+}
+
+function readError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function readStoredDashboard(): DashboardProject | undefined {

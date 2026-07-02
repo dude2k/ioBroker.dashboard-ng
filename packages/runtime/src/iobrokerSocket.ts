@@ -5,19 +5,24 @@ export interface IoBrokerCommandResponse<T> {
 }
 
 export interface IoBrokerSocketLike {
+  readFile?(
+    adapterName: string | null,
+    path: string,
+    callback?: (errorOrResponse?: unknown, data?: unknown, mimeType?: string) => void,
+  ): Promise<unknown> | void;
   sendTo?(
     instance: string,
     command: string,
     payload: unknown,
     callback?: (response: unknown) => void,
   ): Promise<unknown> | void;
-  emit(
-    event: "sendTo",
-    instance: string,
-    command: string,
-    payload: unknown,
-    callback: (response: IoBrokerCommandResponse<unknown>) => void,
-  ): void;
+  writeFile?(
+    adapterName: string | null,
+    path: string,
+    data: string,
+    callback?: (errorOrResponse?: unknown) => void,
+  ): Promise<unknown> | void;
+  emit(event: string, ...args: unknown[]): void;
 }
 
 type IoBrokerSocketFactory = {

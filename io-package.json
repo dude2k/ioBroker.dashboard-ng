@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.7",
+    "version": "0.3.8",
     "news": {
+      "0.3.8": {
+        "en": "Made dashboard load and save use ioBroker adapter file storage directly before falling back to sendTo commands.",
+        "de": "Dashboard-Laden und -Speichern nutzt jetzt zuerst den ioBroker-Adapter-Dateispeicher und erst danach sendTo-Kommandos.",
+        "ru": "Zagruzka i sohranenie dashboard teper snachala ispolzuyut file storage adaptera ioBroker, zatem sendTo.",
+        "pt": "Carregamento e salvamento do dashboard agora usam primeiro o armazenamento de arquivos do adapter ioBroker antes do sendTo.",
+        "nl": "Dashboard laden en opslaan gebruikt nu eerst ioBroker adapter file storage en daarna pas sendTo.",
+        "fr": "Chargement et sauvegarde du dashboard utilisent d'abord le stockage fichier adapter ioBroker puis sendTo.",
+        "it": "Caricamento e salvataggio dashboard usano prima il file storage adapter ioBroker e poi sendTo.",
+        "es": "Carga y guardado del dashboard usan primero el almacenamiento de archivos del adapter ioBroker y luego sendTo.",
+        "pl": "Ladowanie i zapis dashboardu uzywa najpierw storage plikow adaptera ioBroker, a potem sendTo.",
+        "uk": "Zavantazhennya i zberezhennya dashboard teper spochatku vykorystovuyut file storage adaptera ioBroker, potim sendTo.",
+        "zh-cn": "Made dashboard load and save use ioBroker adapter file storage directly before falling back to sendTo commands."
+      },
       "0.3.7": {
         "en": "Fixed Editor save confirmation handling and added legacy messagebox metadata for ioBroker sendTo compatibility.",
         "de": "Editor-Speicherbestaetigung korrigiert und Legacy-messagebox-Metadaten fuer ioBroker-sendTo-Kompatibilitaet ergaenzt.",
