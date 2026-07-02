@@ -161,7 +161,7 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 
 ## Changelog
 
-### Unreleased
+### 0.3.1 (in development)
 
 - Added portrait/landscape responsive preview frames for phone, tablet, desktop
   and wall panel modes.

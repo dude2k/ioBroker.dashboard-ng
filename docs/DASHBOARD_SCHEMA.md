@@ -67,6 +67,15 @@ Components are concrete UI elements:
 - `actionIds`
 - `visibility`
 
+Editor-only component metadata may be stored in `style` so that editor state
+survives save/load without affecting the Viewer:
+
+- `editorLocked`: prevents accidental move, resize, delete and keyboard nudging
+  in the Editor.
+- `editorHidden`: renders the component as a muted placeholder in the Editor.
+
+The Viewer ignores these editor-only keys.
+
 MVP runtime component types:
 
 - `light-card`

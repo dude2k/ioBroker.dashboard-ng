@@ -22,6 +22,27 @@
 Detailed remaining MVP implementation tasks are tracked in
 `docs/MVP_COMPLETION_TASK.md`.
 
+## Current Implementation Status
+
+Completed work packages:
+
+- AP0/AP1: installable adapter foundation, metadata hardening and alpha
+  versioning.
+- AP2: shared runtime component system for Editor preview and Viewer.
+- AP3a: page management.
+- AP3b: palette drag/drop with snapped canvas placement.
+- AP3c: component move and resize handles with undo/redo support.
+- AP3d: responsive preview devices with portrait/landscape handling.
+- AP3e: multi-select, duplicate, lock, editor-hide and keyboard basics.
+- AP3f: local validation, documentation alignment and checker cleanup.
+
+Deferred from the original Work Package 3 scope into later MVP work:
+
+- First-class section/container authoring UI.
+- Nested component editing where supported by the schema.
+- Advanced Mode for exact layout values and breakpoint overrides.
+- Optional lightweight alignment tools.
+
 ## Post-MVP
 
 - Rich per-card inspector controls.

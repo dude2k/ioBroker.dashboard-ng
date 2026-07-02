@@ -6,15 +6,15 @@
       "0.3.0": {
         "en": "Editor page management plus snapped palette drag/drop and move/resize handles.",
         "de": "Editor-Seitenverwaltung plus gerastertes Palette-Drag/Drop und Move/Resize-Handles.",
-        "ru": "Editor page management plus snapped palette drag/drop and move/resize handles.",
-        "pt": "Editor page management plus snapped palette drag/drop and move/resize handles.",
-        "nl": "Editor page management plus snapped palette drag/drop and move/resize handles.",
-        "fr": "Editor page management plus snapped palette drag/drop and move/resize handles.",
-        "it": "Editor page management plus snapped palette drag/drop and move/resize handles.",
-        "es": "Editor page management plus snapped palette drag/drop and move/resize handles.",
-        "pl": "Editor page management plus snapped palette drag/drop and move/resize handles.",
-        "uk": "Editor page management plus snapped palette drag/drop and move/resize handles.",
-        "zh-cn": "Editor page management plus snapped palette drag/drop and move/resize handles."
+        "ru": "Upravlenie stranitsami redaktora, peretaskivanie iz palitry po setke i ruchki peremescheniya/razmera.",
+        "pt": "Gerenciamento de paginas do editor, arrastar/soltar da paleta com grade e alcas de mover/redimensionar.",
+        "nl": "Paginabeheer in de editor plus rastervast slepen vanuit het palet en verplaats-/formaatgrepen.",
+        "fr": "Gestion des pages de l'editeur, glisser-deposer aligne sur la grille et poignees de deplacement/redimensionnement.",
+        "it": "Gestione pagine dell'editor, trascinamento dalla palette agganciato alla griglia e maniglie di spostamento/ridimensionamento.",
+        "es": "Gestion de paginas del editor, arrastrar y soltar desde la paleta con cuadricula y controles de mover/redimensionar.",
+        "pl": "Zarzadzanie stronami edytora, przeciaganie z palety przyciagane do siatki oraz uchwyty przesuwania/zmiany rozmiaru.",
+        "uk": "Keruvannya storinkamy redaktora, peretyaguvannya z palitry z pryvyazkoyu do sitky ta ruchky peremishchennya/rozmiru.",
+        "zh-cn": "Editor pages, snapped palette drag/drop and move/resize handles for 0.3.0."
       },
       "0.2.2": {
         "en": "Added a compatibility redirect for the old /adapter/dashboard-ng/index.html URL.",
