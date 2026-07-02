@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.4",
+    "version": "0.3.5",
     "news": {
+      "0.3.5": {
+        "en": "Added robust ioBroker socket transport and removed misleading production fallback dashboards.",
+        "de": "Robusten ioBroker-Socket-Transport ergaenzt und irrefuehrende Produktions-Fallback-Dashboards entfernt.",
+        "ru": "Dobavlen nadezhnyy ioBroker socket transport i ubrany vvodjashchie v zabluzhdenie production fallback dashboards.",
+        "pt": "Adicionado transporte socket ioBroker robusto e removidos dashboards fallback enganosos em producao.",
+        "nl": "Robuuste ioBroker-sockettransport toegevoegd en misleidende productie-fallbackdashboards verwijderd.",
+        "fr": "Transport socket ioBroker robuste ajoute et dashboards fallback trompeurs en production supprimes.",
+        "it": "Aggiunto trasporto socket ioBroker robusto e rimossi dashboard fallback fuorvianti in produzione.",
+        "es": "Agregado transporte socket ioBroker robusto y eliminados dashboards fallback enganosos en produccion.",
+        "pl": "Dodano odporny transport socket ioBroker i usunieto mylace fallbackowe dashboardy produkcyjne.",
+        "uk": "Dodano nadiynyy ioBroker socket transport i pribrano omanlyvi production fallback dashboards.",
+        "zh-cn": "Added robust ioBroker socket transport and removed misleading production fallback dashboards."
+      },
       "0.3.4": {
         "en": "Fixed Editor saving in ioBroker admin so dashboard changes are written to adapter storage for the Viewer.",
         "de": "Editor-Speichern im ioBroker-Admin korrigiert, damit Dashboard-Aenderungen in den Adapter-Speicher fuer den Viewer geschrieben werden.",

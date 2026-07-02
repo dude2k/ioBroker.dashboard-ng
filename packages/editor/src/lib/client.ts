@@ -134,11 +134,7 @@ function chooseMostRecentDashboard(
 }
 
 function isDemoFallbackAllowed(): boolean {
-  return (
-    import.meta.env.DEV ||
-    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname) ||
-    !window.location.pathname.includes("/adapter/")
-  );
+  return import.meta.env.DEV || new URLSearchParams(window.location.search).get("demo") === "1";
 }
 
 function readMockStates(): Record<string, StatePrimitive> {

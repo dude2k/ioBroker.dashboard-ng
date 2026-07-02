@@ -5,6 +5,12 @@ export interface IoBrokerCommandResponse<T> {
 }
 
 export interface IoBrokerSocketLike {
+  sendTo?(
+    instance: string,
+    command: string,
+    payload: unknown,
+    callback?: (response: unknown) => void,
+  ): Promise<unknown> | void;
   emit(
     event: "sendTo",
     instance: string,
@@ -51,14 +57,33 @@ export async function sendIoBrokerCommand<T>(
       reject(new Error(`Command ${command} timed out.`));
     }, 8000);
 
-    socket.emit("sendTo", instance, command, payload, (response) => {
+    const done = (response: unknown) => {
       window.clearTimeout(timeout);
-      if (!response?.ok) {
-        reject(new Error(response?.error ?? `Command ${command} failed.`));
+      const normalized = normalizeResponse<T>(response);
+      if (!normalized.ok) {
+        reject(new Error(normalized.error ?? `Command ${command} failed.`));
         return;
       }
-      resolve(response.data as T);
-    });
+      resolve(normalized.data);
+    };
+
+    try {
+      if (typeof socket.sendTo === "function") {
+        const result = socket.sendTo(instance, command, payload, done);
+        if (result && typeof result.then === "function") {
+          result.then(done).catch((error: unknown) => {
+            window.clearTimeout(timeout);
+            reject(error instanceof Error ? error : new Error(String(error)));
+          });
+        }
+        return;
+      }
+
+      socket.emit("sendTo", instance, command, payload, done);
+    } catch (error) {
+      window.clearTimeout(timeout);
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
   });
 }
 
@@ -100,7 +125,13 @@ export function parseIoBrokerAdapterInstance(
 }
 
 function readExistingSocket(): IoBrokerSocketLike | undefined {
-  return readWindowValue((candidate) => candidate.socket);
+  return readWindowValue((candidate) => {
+    const socket = candidate.socket;
+    if (socket && (typeof socket.sendTo === "function" || typeof socket.emit === "function")) {
+      return socket;
+    }
+    return undefined;
+  });
 }
 
 async function createSocket(): Promise<IoBrokerSocketLike | undefined> {
@@ -113,6 +144,21 @@ async function createSocket(): Promise<IoBrokerSocketLike | undefined> {
   const socket = factory.connect ? factory.connect() : factory();
   window.socket = socket;
   return socket;
+}
+
+function normalizeResponse<T>(response: unknown): IoBrokerCommandResponse<T> {
+  if (isRecord(response) && "ok" in response) {
+    if (response.ok) {
+      return { ok: true, data: response.data as T };
+    }
+    return { ok: false, error: String(response.error ?? "ioBroker command failed.") };
+  }
+
+  if (isRecord(response) && "error" in response) {
+    return { ok: false, error: String(response.error ?? "ioBroker command failed.") };
+  }
+
+  return { ok: true, data: response as T };
 }
 
 async function ensureSocketIoScript(): Promise<void> {
@@ -166,4 +212,8 @@ function parseInstanceNumber(value: string | null | undefined): number | undefin
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
 }

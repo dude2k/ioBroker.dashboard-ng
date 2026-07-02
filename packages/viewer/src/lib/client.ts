@@ -27,11 +27,15 @@ export const viewerClient = {
       return fileDashboard;
     }
 
-    const stored = window.localStorage.getItem(PROJECT_KEY);
-    if (stored) {
-      return JSON.parse(stored) as DashboardProject;
+    if (isDemoFallbackAllowed()) {
+      const stored = window.localStorage.getItem(PROJECT_KEY);
+      if (stored) {
+        return JSON.parse(stored) as DashboardProject;
+      }
+      return createDefaultDashboard();
     }
-    return createDefaultDashboard();
+
+    throw new Error("Cannot load dashboard from adapter storage.");
   },
 
   async readStates(stateIds: string[]): Promise<StateSnapshot[]> {
@@ -94,4 +98,8 @@ function readMockStates(): Record<string, StatePrimitive> {
     "alias.0.living.temperature": 21.4,
     "alias.0.scene.evening": false,
   };
+}
+
+function isDemoFallbackAllowed(): boolean {
+  return import.meta.env.DEV || new URLSearchParams(window.location.search).get("demo") === "1";
 }
