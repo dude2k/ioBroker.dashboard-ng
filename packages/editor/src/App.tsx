@@ -5,6 +5,7 @@ import {
   Monitor,
   Moon,
   Redo2,
+  RotateCw,
   Save,
   Smartphone,
   Sun,
@@ -34,11 +35,13 @@ const previewOptions: Array<{ value: PreviewSize; label: string; icon: typeof Mo
 export function App() {
   const project = useEditorStore((state) => state.project);
   const preview = useEditorStore((state) => state.preview);
+  const previewOrientation = useEditorStore((state) => state.previewOrientation);
   const dirty = useEditorStore((state) => state.dirty);
   const status = useEditorStore((state) => state.status);
   const setProject = useEditorStore((state) => state.setProject);
   const setStatus = useEditorStore((state) => state.setStatus);
   const setPreview = useEditorStore((state) => state.setPreview);
+  const togglePreviewOrientation = useEditorStore((state) => state.togglePreviewOrientation);
   const addComponent = useEditorStore((state) => state.addComponent);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
@@ -192,6 +195,10 @@ export function App() {
               </button>
             );
           })}
+          <span className="toolbar-separator" />
+          <button title={`Orientation: ${previewOrientation}`} onClick={togglePreviewOrientation}>
+            <RotateCw size={16} aria-hidden="true" />
+          </button>
         </div>
         <input
           accept="application/json"

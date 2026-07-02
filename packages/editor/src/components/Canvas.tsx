@@ -15,8 +15,6 @@ import {
   clampGridPlacement,
   getGridBottom,
   resolveComponentPlacement,
-  runtimeCellSize,
-  runtimeColumns,
 } from "@dashboard-ng/runtime";
 import { getActivePage, getComponentBinding, useEditorStore } from "../store/editorStore";
 import { dashboardClient } from "../lib/client";
@@ -28,6 +26,7 @@ import {
   resizeGridPlacement,
   type ResizeHandle,
 } from "../lib/layoutInteraction";
+import { getPreviewViewport } from "../lib/preview";
 
 interface LayoutDraft {
   componentId: string;
@@ -40,6 +39,7 @@ export function Canvas() {
   const [layoutDraft, setLayoutDraft] = useState<LayoutDraft>();
   const project = useEditorStore((state) => state.project);
   const preview = useEditorStore((state) => state.preview);
+  const previewOrientation = useEditorStore((state) => state.previewOrientation);
   const selectedIds = useEditorStore((state) => state.selectedIds);
   const dragComponentType = useEditorStore((state) => state.dragComponentType);
   const selectComponent = useEditorStore((state) => state.selectComponent);
@@ -53,8 +53,9 @@ export function Canvas() {
   const deletePage = useEditorStore((state) => state.deletePage);
   const stateValues = useEditorStore((state) => state.stateValues);
   const page = getActivePage(project);
-  const columns = runtimeColumns[preview];
-  const cell = runtimeCellSize[preview];
+  const viewport = getPreviewViewport(preview, previewOrientation);
+  const columns = viewport.columns;
+  const cell = viewport.cell;
 
   if (!page) {
     return <main className="canvas-shell">No page</main>;
@@ -66,10 +67,10 @@ export function Canvas() {
     dropPreview ? dropPreview.y + dropPreview.h : 0,
     layoutDraft ? layoutDraft.placement.y + layoutDraft.placement.h : 0,
   );
-  const height = Math.max(520, (contentBottom + 2) * cell);
+  const height = Math.max(viewport.height, (contentBottom + 2) * cell);
 
   return (
-    <main className={`canvas-shell preview-${preview}`}>
+    <main className={`canvas-shell preview-${preview} preview-${previewOrientation}`}>
       <div className="page-tabs">
         <div className="page-tab-list" role="tablist" aria-label="Dashboard pages">
           {project.pages.map((candidate) => (
@@ -118,10 +119,13 @@ export function Canvas() {
       </div>
       <div
         className={`dashboard-canvas ${dropPreview ? "is-drag-target" : ""}`}
+        aria-label={viewport.label}
         style={{
-          width: columns * cell,
+          width: viewport.width,
           minHeight: height,
           backgroundSize: `${cell}px ${cell}px`,
+          gridAutoRows: cell,
+          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
         }}
         onClick={() => useEditorStore.getState().clearSelection()}
         onDragOver={(event) => {

@@ -46,7 +46,8 @@ The Editor is a React/Vite app. It provides:
 - Property inspector.
 - State picker.
 - Undo/redo, copy/paste and import/export.
-- Responsive preview sizes.
+- Responsive preview sizes with editor-only portrait/landscape viewport
+  metadata.
 - Theme switching.
 
 It can run against a real ioBroker socket or a browser-local demo fallback for

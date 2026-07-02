@@ -58,11 +58,11 @@ stay simple.
 ## Editor Concept
 
 - Left palette: components and templates.
-- Center: page tabs and responsive grid canvas with snap-to-grid, move handles
-  and resize handles.
+- Center: page tabs and responsive grid canvas with snap-to-grid, move handles,
+  resize handles and portrait/landscape preview frames.
 - Right inspector: selected component, bindings, actions, visibility and style.
-- Top bar: save, import/export, undo/redo, copy/paste, theme, preview size and
-  Edit/View switch.
+- Top bar: save, import/export, undo/redo, copy/paste, theme, preview size,
+  orientation and Edit/View switch.
 - State picker: search object IDs, names, roles, units and write capability.
 
 ## Viewer Concept

@@ -13,8 +13,13 @@ import {
   type Page,
   type StatePrimitive,
 } from "@dashboard-ng/shared";
+import {
+  togglePreviewOrientation,
+  type PreviewDevice,
+  type PreviewOrientation,
+} from "../lib/preview";
 
-export type PreviewSize = DashboardBreakpoint;
+export type PreviewSize = PreviewDevice;
 
 interface ClipboardData {
   components: DashboardComponent[];
@@ -25,6 +30,7 @@ interface EditorState {
   project: DashboardProject;
   selectedIds: string[];
   preview: PreviewSize;
+  previewOrientation: PreviewOrientation;
   history: DashboardProject[];
   future: DashboardProject[];
   dirty: boolean;
@@ -34,6 +40,8 @@ interface EditorState {
   setProject(project: DashboardProject, status?: string): void;
   setStatus(status: string): void;
   setPreview(preview: PreviewSize): void;
+  setPreviewOrientation(orientation: PreviewOrientation): void;
+  togglePreviewOrientation(): void;
   setStateValues(values: Record<string, StatePrimitive>): void;
   startPaletteDrag(type: ComponentType): void;
   endPaletteDrag(): void;
@@ -65,6 +73,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   project: createDefaultDashboard(),
   selectedIds: [],
   preview: "desktop",
+  previewOrientation: "landscape",
   history: [],
   future: [],
   dirty: false,
@@ -90,6 +99,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setPreview(preview) {
     set({ preview });
+  },
+
+  setPreviewOrientation(orientation) {
+    set({ previewOrientation: orientation });
+  },
+
+  togglePreviewOrientation() {
+    set((state) => ({ previewOrientation: togglePreviewOrientation(state.previewOrientation) }));
   },
 
   setStateValues(values) {
