@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.2",
+    "version": "0.3.3",
     "news": {
+      "0.3.3": {
+        "en": "Fixed Viewer data loading so the web adapter reads the saved adapter dashboard instead of a stale local fallback.",
+        "de": "Viewer-Datenladen korrigiert, damit der Web-Adapter das gespeicherte Adapter-Dashboard statt eines alten lokalen Fallbacks liest.",
+        "ru": "Ispravlena zagruzka dannyh Viewer, chtoby web-adapter chital sohranennuyu panel adaptera vmesto starogo lokalnogo fallbacka.",
+        "pt": "Corrigido o carregamento de dados do Viewer para o web adapter ler o dashboard salvo no adapter em vez de um fallback local antigo.",
+        "nl": "Viewer-datalading opgelost zodat de web adapter het opgeslagen adapterdashboard leest in plaats van een oude lokale fallback.",
+        "fr": "Chargement des donnees du Viewer corrige pour que le web adapter lise le dashboard sauvegarde au lieu d'un ancien fallback local.",
+        "it": "Corretto il caricamento dati del Viewer per leggere il dashboard salvato nell'adapter invece di un vecchio fallback locale.",
+        "es": "Corregida la carga de datos del Viewer para que el web adapter lea el dashboard guardado en vez de un fallback local antiguo.",
+        "pl": "Naprawiono ladowanie danych Viewera, aby web adapter czytal zapisany dashboard adaptera zamiast starego lokalnego fallbacku.",
+        "uk": "Vypravleno zavantazhennya danyh Viewer, shchob web-adapter chytav zberezhenyy dashboard adaptera zamist staroho lokalnoho fallbacku.",
+        "zh-cn": "Fixed Viewer data loading so the web adapter reads the saved adapter dashboard instead of a stale local fallback."
+      },
       "0.3.2": {
         "en": "Aligned Viewer grid sizing with the Editor so saved layouts render consistently in the web adapter.",
         "de": "Viewer-Gridgroessen an den Editor angepasst, damit gespeicherte Layouts im Web-Adapter konsistent erscheinen.",

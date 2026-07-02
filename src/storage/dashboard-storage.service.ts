@@ -2,6 +2,7 @@ import type { DashboardProject, ValidationResult } from "../../packages/shared/s
 import {
   createDefaultDashboard,
   migrateDashboardProject,
+  sanitizeDashboardFilePart,
   validateDashboardProject,
 } from "../../packages/shared/src";
 
@@ -121,7 +122,7 @@ export class DashboardStorageService {
   }
 
   private async writeBackup(dashboardId: string, backup: unknown): Promise<string> {
-    const backupFile = `${BACKUP_DIR}/${sanitizeFilePart(dashboardId)}-${Date.now()}.json`;
+    const backupFile = `${BACKUP_DIR}/${sanitizeDashboardFilePart(dashboardId)}-${Date.now()}.json`;
     await this.adapter.writeFileAsync(
       this.adapter.name,
       backupFile,
@@ -144,12 +145,8 @@ export class DashboardStorageService {
   }
 
   private dashboardFileName(dashboardId: string): string {
-    return `${DASHBOARD_DIR}/${sanitizeFilePart(dashboardId)}.json`;
+    return `${DASHBOARD_DIR}/${sanitizeDashboardFilePart(dashboardId)}.json`;
   }
-}
-
-function sanitizeFilePart(value: string): string {
-  return value.replace(/[^a-zA-Z0-9_.-]/g, "_") || "default";
 }
 
 function fileContentToString(value: AdapterFileContent): string {

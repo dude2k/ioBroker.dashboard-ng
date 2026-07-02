@@ -70,7 +70,7 @@ class DashboardStorageService {
         await this.adapter.writeFileAsync(this.adapter.name, this.dashboardFileName(dashboardId), `${JSON.stringify(dashboard, null, 2)}\n`);
     }
     async writeBackup(dashboardId, backup) {
-        const backupFile = `${BACKUP_DIR}/${sanitizeFilePart(dashboardId)}-${Date.now()}.json`;
+        const backupFile = `${BACKUP_DIR}/${(0, src_1.sanitizeDashboardFilePart)(dashboardId)}-${Date.now()}.json`;
         await this.adapter.writeFileAsync(this.adapter.name, backupFile, `${JSON.stringify(backup, null, 2)}\n`);
         return backupFile;
     }
@@ -87,13 +87,10 @@ class DashboardStorageService {
         }
     }
     dashboardFileName(dashboardId) {
-        return `${DASHBOARD_DIR}/${sanitizeFilePart(dashboardId)}.json`;
+        return `${DASHBOARD_DIR}/${(0, src_1.sanitizeDashboardFilePart)(dashboardId)}.json`;
     }
 }
 exports.DashboardStorageService = DashboardStorageService;
-function sanitizeFilePart(value) {
-    return value.replace(/[^a-zA-Z0-9_.-]/g, "_") || "default";
-}
 function fileContentToString(value) {
     if (Buffer.isBuffer(value)) {
         return value.toString("utf8");
