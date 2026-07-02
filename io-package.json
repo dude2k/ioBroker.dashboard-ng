@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "news": {
+      "0.3.2": {
+        "en": "Aligned Viewer grid sizing with the Editor so saved layouts render consistently in the web adapter.",
+        "de": "Viewer-Gridgroessen an den Editor angepasst, damit gespeicherte Layouts im Web-Adapter konsistent erscheinen.",
+        "ru": "Razmery setki Viewer soglasovany s redaktorom, chtoby sohranennye makety odinakovo otobrazhalis v web-adaptere.",
+        "pt": "Tamanhos da grade do Viewer alinhados ao Editor para renderizar layouts salvos de forma consistente no web adapter.",
+        "nl": "Viewer-gridmaten afgestemd op de Editor zodat opgeslagen layouts consistent in de web adapter renderen.",
+        "fr": "Tailles de grille du Viewer alignees avec l'Editor pour afficher les layouts sauvegardes de facon coherente dans le web adapter.",
+        "it": "Dimensioni griglia del Viewer allineate all'Editor per mostrare layout salvati in modo coerente nel web adapter.",
+        "es": "Tamanos de cuadricula del Viewer alineados con el Editor para renderizar layouts guardados de forma consistente en el web adapter.",
+        "pl": "Rozmiary siatki Viewera dopasowane do Edytora, aby zapisane uklady renderowaly sie spojnie w web adapterze.",
+        "uk": "Rozmiry sitky Viewer uzghodzheni z redaktorom, shchob zberezheni makety odnakovo vidobrazhalysya u web-adapteri.",
+        "zh-cn": "Aligned Viewer grid sizing with the Editor so saved layouts render consistently in the web adapter."
+      },
       "0.3.1": {
         "en": "Added responsive preview orientation, multi-select editor actions and AP3 validation hardening.",
         "de": "Responsive Preview-Ausrichtung, Multi-Select-Editor-Aktionen und AP3-Validierungshaertung ergaenzt.",

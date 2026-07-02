@@ -3,8 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { DashboardProject } from "@dashboard-ng/shared";
 import { createDefaultDashboard } from "@dashboard-ng/shared";
 import {
+  clampGridPlacement,
   DashboardRuntimeCard,
+  getGridBottom,
+  resolveRuntimeBreakpoint,
   resolveComponentPlacement,
+  runtimeCellSize,
+  runtimeColumns,
   type RuntimeStateValues,
 } from "@dashboard-ng/runtime";
 import { viewerClient } from "./lib/client";
@@ -19,6 +24,9 @@ export function ViewerApp() {
   const [online, setOnline] = useState(true);
   const [burnInOffset, setBurnInOffset] = useState({ x: 0, y: 0 });
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | undefined>();
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === "undefined" ? 1024 : window.innerWidth,
+  );
   const page =
     project.pages.find((candidate) => candidate.pageId === project.settings.activePageId) ??
     project.pages[0];
@@ -28,6 +36,11 @@ export function ViewerApp() {
   const components = page
     ? project.components.filter((component) => component.pageId === page.pageId)
     : [];
+  const breakpoint = resolveRuntimeBreakpoint(viewportWidth);
+  const columns = runtimeColumns[breakpoint];
+  const cell = runtimeCellSize[breakpoint];
+  const gridBottom = getGridBottom(components, breakpoint);
+  const gridHeight = Math.max(cell * 8, (gridBottom + 1) * cell);
 
   const stateIds = useMemo(
     () =>
@@ -49,6 +62,12 @@ export function ViewerApp() {
         setOnline(true);
       })
       .catch(() => setOnline(false));
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   useEffect(() => {
@@ -149,9 +168,20 @@ export function ViewerApp() {
 
       {!online ? <div className="connection-hint">Connection interrupted</div> : null}
 
-      <main className="viewer-grid">
+      <main
+        className={`viewer-grid viewer-grid-${breakpoint}`}
+        style={{
+          gridAutoRows: cell,
+          gridTemplateColumns: `repeat(${columns}, ${cell}px)`,
+          minHeight: gridHeight,
+          width: columns * cell,
+        }}
+      >
         {components.map((component) => {
-          const placement = resolveComponentPlacement(component, "wall");
+          const placement = clampGridPlacement(
+            resolveComponentPlacement(component, breakpoint),
+            columns,
+          );
           const bindings = project.bindings.filter(
             (binding) => binding.componentId === component.componentId,
           );

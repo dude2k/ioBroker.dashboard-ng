@@ -14,6 +14,22 @@ export const runtimeCellSize: Record<DashboardBreakpoint, number> = {
   wall: 78,
 };
 
+export function resolveRuntimeBreakpoint(width: number): DashboardBreakpoint {
+  if (width < 640) {
+    return "phone";
+  }
+
+  if (width < 1024) {
+    return "tablet";
+  }
+
+  if (width < 1440) {
+    return "desktop";
+  }
+
+  return "wall";
+}
+
 export function resolveComponentPlacement(
   component: DashboardComponent,
   breakpoint: DashboardBreakpoint,
