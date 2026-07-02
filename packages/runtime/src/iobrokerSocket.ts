@@ -8,7 +8,8 @@ export interface IoBrokerSocketLike {
   readFile?(
     adapterName: string | null,
     path: string,
-    callback?: (errorOrResponse?: unknown, data?: unknown, mimeType?: string) => void,
+    base64OrCallback?:
+      boolean | ((errorOrResponse?: unknown, data?: unknown, mimeType?: string) => void),
   ): Promise<unknown> | void;
   sendTo?(
     instance: string,
@@ -21,6 +22,11 @@ export interface IoBrokerSocketLike {
     path: string,
     data: string,
     callback?: (errorOrResponse?: unknown) => void,
+  ): Promise<unknown> | void;
+  writeFile64?(
+    adapterName: string,
+    path: string,
+    data: ArrayBuffer | string,
   ): Promise<unknown> | void;
   emit(event: string, ...args: unknown[]): void;
 }

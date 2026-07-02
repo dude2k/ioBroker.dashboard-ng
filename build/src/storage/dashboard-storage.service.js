@@ -14,10 +14,12 @@ class DashboardStorageService {
         const fileName = this.dashboardFileName(dashboardId);
         let raw;
         try {
+            this.adapter.log.debug(`Reading dashboard "${dashboardId}" from ${fileName}.`);
             raw = await this.adapter.readFileAsync(this.adapter.name, fileName);
         }
         catch (error) {
             if (isMissingFileError(error)) {
+                this.adapter.log.info(`Dashboard "${dashboardId}" does not exist yet. Creating default dashboard at ${fileName}.`);
                 const dashboard = (0, src_1.createDefaultDashboard)({ projectId: dashboardId });
                 await this.saveDashboard(dashboardId, dashboard);
                 return {
@@ -41,6 +43,7 @@ class DashboardStorageService {
             migrated: migration.migrated,
             validation: migration.validation,
         };
+        this.adapter.log.debug(`Loaded dashboard "${dashboardId}" with ${stored.dashboard.components.length} components.`);
         if (backupFile) {
             stored.backupFile = backupFile;
         }
@@ -58,6 +61,7 @@ class DashboardStorageService {
         }
         await this.ensureDirectories();
         await this.writeDashboardFile(dashboardId, next);
+        this.adapter.log.info(`Saved dashboard "${dashboardId}" with ${next.components.length} components to ${this.dashboardFileName(dashboardId)}.`);
         if (this.adapter.setStateAsync) {
             await this.adapter.setStateAsync("info.lastDashboardSave", Date.now(), true);
         }

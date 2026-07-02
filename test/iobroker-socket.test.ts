@@ -81,12 +81,50 @@ describe("ioBroker socket helpers", () => {
     );
   });
 
+  it("reads adapter files through the promise-based socket-client API", async () => {
+    const socket: IoBrokerSocketLike = {
+      readFile: (adapterName, path, base64OrCallback) =>
+        Promise.resolve({
+          file: JSON.stringify({ adapterName, path, base64: base64OrCallback }),
+          mimeType: "application/json",
+        }),
+      emit: vi.fn(),
+    };
+    stubSocketWindow(socket);
+
+    await expect(readIoBrokerFile("dashboard-ng", "dashboards/default.json")).resolves.toBe(
+      '{"adapterName":"dashboard-ng","path":"dashboards/default.json","base64":false}',
+    );
+  });
+
   it("writes adapter files through the ioBroker socket file API", async () => {
     const writes: Array<{ adapterName: string | null; path: string; data: string }> = [];
     const socket: IoBrokerSocketLike = {
       writeFile: (adapterName, path, data, callback) => {
         writes.push({ adapterName, path, data });
         callback?.(null);
+      },
+      emit: vi.fn(),
+    };
+    stubSocketWindow(socket);
+
+    await writeIoBrokerFile("dashboard-ng", "dashboards/default.json", '{"ok":true}');
+
+    expect(writes).toEqual([
+      {
+        adapterName: "dashboard-ng",
+        path: "dashboards/default.json",
+        data: '{"ok":true}',
+      },
+    ]);
+  });
+
+  it("writes adapter files through the promise-based socket-client API", async () => {
+    const writes: Array<{ adapterName: string; path: string; data: ArrayBuffer | string }> = [];
+    const socket: IoBrokerSocketLike = {
+      writeFile64: (adapterName, path, data) => {
+        writes.push({ adapterName, path, data });
+        return Promise.resolve();
       },
       emit: vi.fn(),
     };

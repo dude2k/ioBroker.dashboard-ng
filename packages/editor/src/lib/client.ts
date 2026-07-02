@@ -17,9 +17,15 @@ const DEFAULT_DASHBOARD_ID = "default";
 
 export const dashboardClient = {
   async loadDashboard(): Promise<DashboardProject> {
+    logClient("dashboard.load", "start", `dashboardId=${DEFAULT_DASHBOARD_ID}`);
     const fileDashboard = await loadDashboardFile(DEFAULT_DASHBOARD_ID);
     if (fileDashboard) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fileDashboard));
+      logClient(
+        "dashboard.load",
+        "ok",
+        `source=file components=${fileDashboard.components.length}`,
+      );
       return fileDashboard;
     }
 
@@ -31,6 +37,7 @@ export const dashboardClient = {
         ? chooseMostRecentDashboard(response, readStoredDashboard())
         : response;
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(selected));
+      logClient("dashboard.load", "ok", `source=sendTo components=${selected.components.length}`);
       return selected;
     }
 
@@ -39,8 +46,10 @@ export const dashboardClient = {
       try {
         const saved = await saveDashboardFile(DEFAULT_DASHBOARD_ID, dashboard);
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        logClient("dashboard.load", "ok", "source=created-default");
         return saved;
-      } catch {
+      } catch (error) {
+        logClient("dashboard.load", "failed", readError(error));
         throw new Error("Cannot load dashboard from ioBroker adapter storage.");
       }
     }
@@ -55,13 +64,20 @@ export const dashboardClient = {
   },
 
   async saveDashboard(dashboard: DashboardProject): Promise<DashboardProject> {
+    logClient(
+      "dashboard.save",
+      "start",
+      `components=${dashboard.components.length} bindings=${dashboard.bindings.length}`,
+    );
     let fileError: unknown;
     try {
       const saved = await saveDashboardFile(DEFAULT_DASHBOARD_ID, dashboard);
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      logClient("dashboard.save", "ok", "target=file");
       return saved;
     } catch (error) {
       fileError = error;
+      logClient("dashboard.save", "failed", `target=file ${readError(error)}`);
     }
 
     const response = await sendToSilently<DashboardProject>("dashboard.save", {
@@ -70,10 +86,12 @@ export const dashboardClient = {
     });
     if (response) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
+      logClient("dashboard.save", "ok", "target=sendTo");
       return response;
     }
 
     if (!isDemoFallbackAllowed()) {
+      logClient("dashboard.save", "failed", "sendTo fallback did not confirm save");
       throw new Error(`Dashboard was not saved to adapter storage: ${readError(fileError)}`);
     }
 
@@ -140,7 +158,8 @@ function sendTo<T>(command: string, payload: unknown): Promise<T | undefined> {
 async function sendToSilently<T>(command: string, payload: unknown): Promise<T | undefined> {
   try {
     return await sendTo<T>(command, payload);
-  } catch {
+  } catch (error) {
+    logClient(command, "failed", `sendTo ${readError(error)}`);
     return undefined;
   }
 }
@@ -149,10 +168,12 @@ async function loadDashboardFile(dashboardId: string): Promise<DashboardProject 
   try {
     const raw = await readIoBrokerFile(ADAPTER_NAME, dashboardFileName(dashboardId));
     if (!raw) {
+      logClient("dashboard.file.load", "failed", "empty response");
       return undefined;
     }
     return migrateDashboardProject(JSON.parse(raw)).project;
-  } catch {
+  } catch (error) {
+    logClient("dashboard.file.load", "failed", readError(error));
     return undefined;
   }
 }
@@ -186,6 +207,16 @@ function dashboardFileName(dashboardId: string): string {
 
 function readError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function logClient(operation: string, status: "start" | "ok" | "failed", detail?: string): void {
+  const suffix = detail ? `: ${detail}` : "";
+  const message = `[Dashboard-NG] ${operation} ${status}${suffix}`;
+  if (status === "failed") {
+    console.warn(message);
+    return;
+  }
+  console.info(message);
 }
 
 function readStoredDashboard(): DashboardProject | undefined {

@@ -55,18 +55,22 @@ class DashboardNgAdapter extends utils.Adapter {
         this.stateBinding = new state_binding_service_1.StateBindingService(this);
         await this.setStateAsync("info.connection", true, true);
         const config = this.config;
-        await this.storage.loadDashboard(config.defaultDashboardId || "default");
-        this.log.info("Dashboard-NG adapter started.");
+        const dashboardId = config.defaultDashboardId || "default";
+        await this.storage.loadDashboard(dashboardId);
+        this.log.info(`Dashboard-NG adapter started with default dashboard "${dashboardId}".`);
     }
     onUnload(callback) {
         void this.setStateAsync("info.connection", false, true).finally(callback);
     }
     async onMessage(message) {
         if (!message || typeof message.command !== "string" || !message.callback) {
+            this.log.debug("Ignored adapter message without command or callback.");
             return;
         }
         try {
+            this.log.debug(`Received command ${message.command} from ${message.from}.`);
             const data = await this.handleCommand(message.command, message.message);
+            this.log.debug(`Command ${message.command} completed.`);
             this.sendTo(message.from, message.command, { ok: true, data }, message.callback);
         }
         catch (error) {
@@ -79,7 +83,9 @@ class DashboardNgAdapter extends utils.Adapter {
         switch (command) {
             case "dashboard.load": {
                 const typedPayload = payload;
-                const stored = await this.requireStorage().loadDashboard(typedPayload?.dashboardId ?? "default");
+                const dashboardId = typedPayload?.dashboardId ?? "default";
+                this.log.info(`Loading dashboard "${dashboardId}" via sendTo command.`);
+                const stored = await this.requireStorage().loadDashboard(dashboardId);
                 return stored.dashboard;
             }
             case "dashboard.save": {
@@ -87,7 +93,9 @@ class DashboardNgAdapter extends utils.Adapter {
                 if (!typedPayload?.dashboard) {
                     throw new Error("Missing dashboard payload.");
                 }
-                return this.requireStorage().saveDashboard(typedPayload.dashboardId ?? typedPayload.dashboard.projectId, typedPayload.dashboard);
+                const dashboardId = typedPayload.dashboardId ?? typedPayload.dashboard.projectId;
+                this.log.info(`Saving dashboard "${dashboardId}" via sendTo command with ${typedPayload.dashboard.components.length} components.`);
+                return this.requireStorage().saveDashboard(dashboardId, typedPayload.dashboard);
             }
             case "dashboard.export": {
                 const typedPayload = payload;

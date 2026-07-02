@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.8",
+    "version": "0.3.9",
     "news": {
+      "0.3.9": {
+        "en": "Fixed ioBroker socket-client file API handling and added browser and adapter diagnostics for dashboard persistence.",
+        "de": "ioBroker-socket-client-Datei-API korrigiert und Browser-/Adapter-Diagnose fuer Dashboard-Speicherung ergaenzt.",
+        "ru": "Ispravlena obrabotka file API ioBroker socket-client i dobavlena diagnostika browser/adapter dlya dashboard persistence.",
+        "pt": "Corrigido o uso da file API do ioBroker socket-client e adicionada diagnostica no navegador e adapter para persistencia do dashboard.",
+        "nl": "ioBroker socket-client file API-afhandeling opgelost en browser/adapterdiagnostiek toegevoegd voor dashboardopslag.",
+        "fr": "Gestion de la file API ioBroker socket-client corrigee et diagnostics navigateur/adapter ajoutes pour la persistance dashboard.",
+        "it": "Corretta la gestione file API di ioBroker socket-client e aggiunta diagnostica browser/adapter per la persistenza dashboard.",
+        "es": "Corregido el manejo de la file API de ioBroker socket-client y agregados diagnosticos navegador/adapter para persistencia dashboard.",
+        "pl": "Naprawiono obsluge file API ioBroker socket-client i dodano diagnostyke browser/adapter dla zapisu dashboardu.",
+        "uk": "Vypravleno obrobku file API ioBroker socket-client i dodano diahnostyku browser/adapter dlya zberezhennya dashboard.",
+        "zh-cn": "Fixed ioBroker socket-client file API handling and added browser and adapter diagnostics for dashboard persistence."
+      },
       "0.3.8": {
         "en": "Made dashboard load and save use ioBroker adapter file storage directly before falling back to sendTo commands.",
         "de": "Dashboard-Laden und -Speichern nutzt jetzt zuerst den ioBroker-Adapter-Dateispeicher und erst danach sendTo-Kommandos.",

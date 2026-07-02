@@ -227,7 +227,9 @@ export function App() {
           <img src="./dashboard-ng.svg" alt="" />
           <div>
             <strong>Dashboard-NG</strong>
-            <span>{formatEditorStatus(dirty, status)}</span>
+            <span title={formatEditorStatus(dirty, status)}>
+              {formatEditorStatus(dirty, status)}
+            </span>
           </div>
         </div>
 
