@@ -10,6 +10,7 @@ import {
 } from "@dashboard-ng/shared";
 import {
   appendDiagnostic,
+  createDiagnosticTrace,
   readIoBrokerFile,
   sendIoBrokerCommand,
   writeIoBrokerFile,
@@ -22,81 +23,118 @@ const DEFAULT_DASHBOARD_ID = "default";
 
 export const dashboardClient = {
   async loadDashboard(): Promise<DashboardProject> {
-    logClient("dashboard.load", "start", `dashboardId=${DEFAULT_DASHBOARD_ID}`);
-    const fileDashboard = await loadDashboardFile(DEFAULT_DASHBOARD_ID);
+    const traceId = createDiagnosticTrace("load");
+    logClient(traceId, "dashboard.load", "start", {
+      dashboardId: DEFAULT_DASHBOARD_ID,
+      environment: readEnvironmentSummary(),
+    });
+    const fileDashboard = await loadDashboardFile(DEFAULT_DASHBOARD_ID, traceId);
     if (fileDashboard) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fileDashboard));
-      logClient(
-        "dashboard.load",
-        "ok",
-        `source=file components=${fileDashboard.components.length}`,
-      );
+      logClient(traceId, "dashboard.load", "ok", {
+        source: "file",
+        dashboard: summarizeDashboard(fileDashboard),
+      });
       return fileDashboard;
     }
 
-    const response = await sendToSilently<DashboardProject>("dashboard.load", {
-      dashboardId: DEFAULT_DASHBOARD_ID,
-    });
+    const response = await sendToSilently<DashboardProject>(
+      "dashboard.load",
+      {
+        dashboardId: DEFAULT_DASHBOARD_ID,
+      },
+      traceId,
+    );
     if (response) {
       const selected = isDemoFallbackAllowed()
         ? chooseMostRecentDashboard(response, readStoredDashboard())
         : response;
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(selected));
-      logClient("dashboard.load", "ok", `source=sendTo components=${selected.components.length}`);
+      logClient(traceId, "dashboard.load", "ok", {
+        source: "sendTo",
+        dashboard: summarizeDashboard(selected),
+      });
       return selected;
     }
 
     if (!isDemoFallbackAllowed()) {
       const dashboard = createDefaultDashboard({ projectId: DEFAULT_DASHBOARD_ID });
       try {
-        const saved = await saveDashboardFile(DEFAULT_DASHBOARD_ID, dashboard);
+        const saved = await saveDashboardFile(DEFAULT_DASHBOARD_ID, dashboard, traceId);
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-        logClient("dashboard.load", "ok", "source=created-default");
+        logClient(traceId, "dashboard.load", "ok", {
+          source: "created-default",
+          dashboard: summarizeDashboard(saved),
+        });
         return saved;
       } catch (error) {
-        logClient("dashboard.load", "failed", readError(error));
+        logClient(traceId, "dashboard.load", "failed", { error: readError(error) });
         throw new Error("Cannot load dashboard from ioBroker adapter storage.");
       }
     }
 
     const stored = readStoredDashboard();
     if (stored) {
+      logClient(traceId, "dashboard.load", "ok", {
+        source: "localStorage-dev",
+        dashboard: summarizeDashboard(stored),
+      });
       return stored;
     }
     const dashboard = createDefaultDashboard();
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(dashboard));
+    logClient(traceId, "dashboard.load", "ok", {
+      source: "demo-default",
+      dashboard: summarizeDashboard(dashboard),
+    });
     return dashboard;
   },
 
   async saveDashboard(dashboard: DashboardProject): Promise<DashboardProject> {
-    logClient(
-      "dashboard.save",
-      "start",
-      `components=${dashboard.components.length} bindings=${dashboard.bindings.length}`,
-    );
+    const traceId = createDiagnosticTrace("save");
+    logClient(traceId, "dashboard.save", "start", {
+      dashboard: summarizeDashboard(dashboard),
+      environment: readEnvironmentSummary(),
+    });
     let fileError: unknown;
     try {
-      const saved = await saveDashboardFile(DEFAULT_DASHBOARD_ID, dashboard);
+      const saved = await saveDashboardFile(DEFAULT_DASHBOARD_ID, dashboard, traceId);
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-      logClient("dashboard.save", "ok", "target=file");
+      logClient(traceId, "dashboard.save", "ok", {
+        target: "file",
+        dashboard: summarizeDashboard(saved),
+      });
       return saved;
     } catch (error) {
       fileError = error;
-      logClient("dashboard.save", "failed", `target=file ${readError(error)}`);
+      logClient(traceId, "dashboard.save", "failed", {
+        target: "file",
+        error: readError(error),
+      });
     }
 
-    const response = await sendToSilently<DashboardProject>("dashboard.save", {
-      dashboardId: DEFAULT_DASHBOARD_ID,
-      dashboard,
-    });
+    const response = await sendToSilently<DashboardProject>(
+      "dashboard.save",
+      {
+        dashboardId: DEFAULT_DASHBOARD_ID,
+        dashboard,
+      },
+      traceId,
+    );
     if (response) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
-      logClient("dashboard.save", "ok", "target=sendTo");
+      logClient(traceId, "dashboard.save", "ok", {
+        target: "sendTo",
+        dashboard: summarizeDashboard(response),
+      });
       return response;
     }
 
     if (!isDemoFallbackAllowed()) {
-      logClient("dashboard.save", "failed", "sendTo fallback did not confirm save");
+      logClient(traceId, "dashboard.save", "failed", {
+        target: "sendTo",
+        error: "sendTo fallback did not confirm save",
+      });
       throw new Error(`Dashboard was not saved to adapter storage: ${readError(fileError)}`);
     }
 
@@ -156,29 +194,47 @@ export const dashboardClient = {
   },
 };
 
-function sendTo<T>(command: string, payload: unknown): Promise<T | undefined> {
-  return sendIoBrokerCommand<T>(ADAPTER_NAME, command, payload);
+function sendTo<T>(command: string, payload: unknown, traceId = command): Promise<T | undefined> {
+  return sendIoBrokerCommand<T>(ADAPTER_NAME, command, addDebugTrace(payload, traceId), {
+    traceId,
+  });
 }
 
-async function sendToSilently<T>(command: string, payload: unknown): Promise<T | undefined> {
+async function sendToSilently<T>(
+  command: string,
+  payload: unknown,
+  traceId = command,
+): Promise<T | undefined> {
   try {
-    return await sendTo<T>(command, payload);
+    return await sendTo<T>(command, payload, traceId);
   } catch (error) {
-    logClient(command, "failed", `sendTo ${readError(error)}`);
+    logClient(traceId, command, "failed", { transport: "sendTo", error: readError(error) });
     return undefined;
   }
 }
 
-async function loadDashboardFile(dashboardId: string): Promise<DashboardProject | undefined> {
+async function loadDashboardFile(
+  dashboardId: string,
+  traceId: string,
+): Promise<DashboardProject | undefined> {
+  const fileName = dashboardFileName(dashboardId);
   try {
-    const raw = await readIoBrokerFile(ADAPTER_NAME, dashboardFileName(dashboardId));
+    logClient(traceId, "dashboard.file.load", "start", { fileName });
+    const raw = await readIoBrokerFile(ADAPTER_NAME, fileName, { traceId });
     if (!raw) {
-      logClient("dashboard.file.load", "failed", "empty response");
+      logClient(traceId, "dashboard.file.load", "failed", { error: "empty response", fileName });
       return undefined;
     }
-    return migrateDashboardProject(JSON.parse(raw)).project;
+    logClient(traceId, "dashboard.file.load", "ok", { fileName, bytes: raw.length });
+    const migration = migrateDashboardProject(JSON.parse(raw));
+    logClient(traceId, "dashboard.file.migrate", "ok", {
+      migrated: migration.migrated,
+      validation: summarizeValidation(migration.validation),
+      dashboard: summarizeDashboard(migration.project),
+    });
+    return migration.project;
   } catch (error) {
-    logClient("dashboard.file.load", "failed", readError(error));
+    logClient(traceId, "dashboard.file.load", "failed", { fileName, error: readError(error) });
     return undefined;
   }
 }
@@ -186,23 +242,35 @@ async function loadDashboardFile(dashboardId: string): Promise<DashboardProject 
 async function saveDashboardFile(
   dashboardId: string,
   dashboard: DashboardProject,
+  traceId: string,
 ): Promise<DashboardProject> {
   const next: DashboardProject = {
     ...dashboard,
     projectId: dashboard.projectId || dashboardId,
     updatedAt: new Date().toISOString(),
   };
+  const fileName = dashboardFileName(dashboardId);
+  logClient(traceId, "dashboard.file.prepare", "start", {
+    fileName,
+    dashboard: summarizeDashboard(next),
+  });
   const validation = validateDashboardProject(next);
   if (!validation.valid) {
+    logClient(traceId, "dashboard.file.validate", "failed", {
+      validation: summarizeValidation(validation),
+    });
     throw new Error(
       `Dashboard validation failed: ${validation.issues.map((issue) => issue.message).join("; ")}`,
     );
   }
-  await writeIoBrokerFile(
-    ADAPTER_NAME,
-    dashboardFileName(dashboardId),
-    `${JSON.stringify(next, null, 2)}\n`,
-  );
+  logClient(traceId, "dashboard.file.validate", "ok", {
+    validation: summarizeValidation(validation),
+  });
+  const serialized = `${JSON.stringify(next, null, 2)}\n`;
+  logClient(traceId, "dashboard.file.write", "start", { fileName, bytes: serialized.length });
+  await writeIoBrokerFile(ADAPTER_NAME, fileName, serialized, { traceId });
+  logClient(traceId, "dashboard.file.write", "ok", { fileName, bytes: serialized.length });
+  await verifySavedDashboard(dashboardId, next, traceId);
   return next;
 }
 
@@ -214,9 +282,17 @@ function readError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function logClient(operation: string, status: "start" | "ok" | "failed", detail?: string): void {
-  const suffix = detail ? `: ${detail}` : "";
-  appendDiagnostic(status === "failed" ? "error" : "info", `${operation} ${status}${suffix}`);
+function logClient(
+  traceId: string,
+  operation: string,
+  status: "start" | "ok" | "failed",
+  detail?: Record<string, unknown>,
+): void {
+  appendDiagnostic(
+    status === "failed" ? "error" : "info",
+    `[${traceId}] ${operation} ${status}`,
+    detail,
+  );
 }
 
 function readStoredDashboard(): DashboardProject | undefined {
@@ -243,6 +319,85 @@ function chooseMostRecentDashboard(
 
 function isDemoFallbackAllowed(): boolean {
   return import.meta.env.DEV || new URLSearchParams(window.location.search).get("demo") === "1";
+}
+
+async function verifySavedDashboard(
+  dashboardId: string,
+  expected: DashboardProject,
+  traceId: string,
+): Promise<void> {
+  const verifyTraceId = `${traceId}:verify`;
+  const fileName = dashboardFileName(dashboardId);
+  try {
+    const raw = await readIoBrokerFile(ADAPTER_NAME, fileName, { traceId: verifyTraceId });
+    if (!raw) {
+      logClient(traceId, "dashboard.file.verify", "failed", {
+        fileName,
+        error: "empty read after write",
+      });
+      return;
+    }
+    const verified = migrateDashboardProject(JSON.parse(raw)).project;
+    const matches =
+      verified.projectId === expected.projectId &&
+      verified.updatedAt === expected.updatedAt &&
+      verified.components.length === expected.components.length;
+    logClient(traceId, "dashboard.file.verify", matches ? "ok" : "failed", {
+      fileName,
+      bytes: raw.length,
+      expected: summarizeDashboard(expected),
+      actual: summarizeDashboard(verified),
+    });
+  } catch (error) {
+    logClient(traceId, "dashboard.file.verify", "failed", {
+      fileName,
+      error: readError(error),
+    });
+  }
+}
+
+function addDebugTrace(payload: unknown, traceId: string): unknown {
+  if (!isRecord(payload)) {
+    return payload;
+  }
+  return { ...payload, debugTraceId: traceId };
+}
+
+function summarizeDashboard(dashboard: DashboardProject): Record<string, unknown> {
+  return {
+    projectId: dashboard.projectId,
+    schemaVersion: dashboard.schemaVersion,
+    pages: dashboard.pages.length,
+    components: dashboard.components.length,
+    bindings: dashboard.bindings.length,
+    actions: dashboard.actions.length,
+    layouts: Object.keys(dashboard.layouts).length,
+    updatedAt: dashboard.updatedAt,
+  };
+}
+
+function summarizeValidation(validation: ReturnType<typeof validateDashboardProject>): string {
+  if (validation.valid) {
+    return "valid";
+  }
+  return validation.issues
+    .slice(0, 6)
+    .map((issue) => `${issue.path}:${issue.message}`)
+    .join(" | ");
+}
+
+function readEnvironmentSummary(): Record<string, unknown> {
+  return {
+    href: window.location.href,
+    search: window.location.search,
+    adapterInstance: window.adapterInstance,
+    hasWindowSocket: Boolean(window.socket),
+    localStorageDashboardBytes: window.localStorage.getItem(STORAGE_KEY)?.length ?? 0,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
 }
 
 function readMockStates(): Record<string, StatePrimitive> {

@@ -1,5 +1,5 @@
-import { appendDiagnostic } from "./diagnostics";
-import { resolveIoBrokerSocket } from "./iobrokerSocket";
+import { appendDiagnostic, describeDiagnosticValue } from "./diagnostics";
+import { describeIoBrokerSocket, resolveIoBrokerSocket } from "./iobrokerSocket";
 
 interface FileReadResult {
   ok: boolean;
@@ -7,41 +7,81 @@ interface FileReadResult {
   error?: string;
 }
 
+export interface IoBrokerFileOptions {
+  traceId?: string;
+  timeoutMs?: number;
+}
+
 export async function readIoBrokerFile(
   adapterName: string,
   path: string,
+  options: IoBrokerFileOptions = {},
 ): Promise<string | undefined> {
-  const socket = await resolveIoBrokerSocket();
+  const traceId = options.traceId ?? `read:${path}`;
+  const socket = await resolveIoBrokerSocket(traceId);
   if (!socket) {
-    logFileOperation("read", adapterName, path, "skipped", "ioBroker socket is not available");
+    logFileOperation(
+      traceId,
+      "read",
+      adapterName,
+      path,
+      "skipped",
+      "ioBroker socket is not available",
+    );
     return undefined;
   }
 
-  logFileOperation("read", adapterName, path, "start");
+  logFileOperation(
+    traceId,
+    "read",
+    adapterName,
+    path,
+    "start",
+    `socket=${describeIoBrokerSocket(socket)}`,
+  );
   return new Promise((resolve, reject) => {
     let settled = false;
     const timeout = window.setTimeout(() => {
       settled = true;
-      logFileOperation("read", adapterName, path, "failed", "timeout");
+      logFileOperation(traceId, "read", adapterName, path, "failed", "timeout");
       reject(new Error(`Reading ${adapterName}/${path} timed out.`));
-    }, 5000);
+    }, options.timeoutMs ?? 5000);
 
     const done = (errorOrResponse?: unknown, data?: unknown) => {
       if (settled) {
+        appendDiagnostic("warn", `[${traceId}] readFile ignored late response`, {
+          errorOrResponse: describeDiagnosticValue(errorOrResponse),
+          data: describeDiagnosticValue(data),
+        });
         return;
       }
+      appendDiagnostic("info", `[${traceId}] readFile callback/promise response`, {
+        errorOrResponse: describeDiagnosticValue(errorOrResponse),
+        data: describeDiagnosticValue(data),
+      });
       const result = normalizeReadResult(errorOrResponse, data);
       if (!result.ok && !result.error) {
+        appendDiagnostic("warn", `[${traceId}] readFile response not usable yet`, {
+          errorOrResponse: describeDiagnosticValue(errorOrResponse),
+          data: describeDiagnosticValue(data),
+        });
         return;
       }
       settled = true;
       window.clearTimeout(timeout);
       if (!result.ok) {
-        logFileOperation("read", adapterName, path, "failed", result.error);
+        logFileOperation(traceId, "read", adapterName, path, "failed", result.error);
         reject(new Error(result.error ?? `Cannot read ${adapterName}/${path}.`));
         return;
       }
-      logFileOperation("read", adapterName, path, "ok", `${result.data?.length ?? 0} bytes`);
+      logFileOperation(
+        traceId,
+        "read",
+        adapterName,
+        path,
+        "ok",
+        `${result.data?.length ?? 0} bytes`,
+      );
       resolve(result.data);
     };
 
@@ -49,22 +89,48 @@ export async function readIoBrokerFile(
       if (typeof socket.readFile === "function") {
         let result: Promise<unknown> | void;
         try {
+          appendDiagnostic("info", `[${traceId}] trying socket.readFile promise signature`, {
+            adapterName,
+            path,
+            base64: false,
+          });
           result = socket.readFile(adapterName, path, false);
-        } catch {
+        } catch (error) {
+          appendDiagnostic("warn", `[${traceId}] socket.readFile promise signature threw`, {
+            error: readError(error) ?? String(error),
+          });
           result = undefined;
         }
-        if (handlePromiseResult(result, (response) => done(response))) {
+        if (handlePromiseResult(traceId, result, (response) => done(response))) {
           return;
         }
+        appendDiagnostic("info", `[${traceId}] trying socket.readFile callback signature`, {
+          adapterName,
+          path,
+        });
         const callbackResult = socket.readFile(adapterName, path, done);
-        handlePromiseResult(callbackResult, (response) => done(response));
+        handlePromiseResult(traceId, callbackResult, (response) => done(response));
         return;
       }
+      if (typeof socket.emit !== "function") {
+        throw new Error(`Socket has no readFile or emit method for ${adapterName}/${path}.`);
+      }
+      appendDiagnostic("info", `[${traceId}] trying raw socket.emit readFile`, {
+        adapterName,
+        path,
+      });
       socket.emit("readFile", adapterName, path, done);
     } catch (error) {
       settled = true;
       window.clearTimeout(timeout);
-      logFileOperation("read", adapterName, path, "failed", readError(error) ?? String(error));
+      logFileOperation(
+        traceId,
+        "read",
+        adapterName,
+        path,
+        "failed",
+        readError(error) ?? String(error),
+      );
       reject(error instanceof Error ? error : new Error(String(error)));
     }
   });
@@ -74,62 +140,112 @@ export async function writeIoBrokerFile(
   adapterName: string,
   path: string,
   data: string,
+  options: IoBrokerFileOptions = {},
 ): Promise<void> {
-  const socket = await resolveIoBrokerSocket();
+  const traceId = options.traceId ?? `write:${path}`;
+  const socket = await resolveIoBrokerSocket(traceId);
   if (!socket) {
-    logFileOperation("write", adapterName, path, "failed", "ioBroker socket is not available");
+    logFileOperation(
+      traceId,
+      "write",
+      adapterName,
+      path,
+      "failed",
+      "ioBroker socket is not available",
+    );
     throw new Error("ioBroker socket is not available.");
   }
 
-  logFileOperation("write", adapterName, path, "start", `${data.length} bytes`);
+  logFileOperation(
+    traceId,
+    "write",
+    adapterName,
+    path,
+    "start",
+    `${data.length} bytes socket=${describeIoBrokerSocket(socket)}`,
+  );
   return new Promise((resolve, reject) => {
     let settled = false;
     const timeout = window.setTimeout(() => {
       settled = true;
-      logFileOperation("write", adapterName, path, "failed", "timeout");
+      logFileOperation(traceId, "write", adapterName, path, "failed", "timeout");
       reject(new Error(`Writing ${adapterName}/${path} timed out.`));
-    }, 5000);
+    }, options.timeoutMs ?? 5000);
 
     const done = (errorOrResponse?: unknown) => {
       if (settled) {
+        appendDiagnostic("warn", `[${traceId}] writeFile ignored late response`, {
+          response: describeDiagnosticValue(errorOrResponse),
+        });
         return;
       }
+      appendDiagnostic("info", `[${traceId}] writeFile callback/promise response`, {
+        response: describeDiagnosticValue(errorOrResponse),
+      });
       const error = readError(errorOrResponse);
       settled = true;
       window.clearTimeout(timeout);
       if (error) {
-        logFileOperation("write", adapterName, path, "failed", error);
+        logFileOperation(traceId, "write", adapterName, path, "failed", error);
         reject(new Error(error));
         return;
       }
-      logFileOperation("write", adapterName, path, "ok", `${data.length} bytes`);
+      logFileOperation(traceId, "write", adapterName, path, "ok", `${data.length} bytes`);
       resolve();
     };
 
     try {
       if (typeof socket.writeFile64 === "function") {
+        appendDiagnostic("info", `[${traceId}] trying socket.writeFile64`, {
+          adapterName,
+          path,
+          bytes: data.length,
+        });
         const result = socket.writeFile64(adapterName, path, data);
-        if (handlePromiseResult(result, done, true)) {
+        if (handlePromiseResult(traceId, result, done, true)) {
           return;
         }
       }
       if (typeof socket.writeFile === "function") {
+        appendDiagnostic("info", `[${traceId}] trying socket.writeFile callback signature`, {
+          adapterName,
+          path,
+          bytes: data.length,
+        });
         const result = socket.writeFile(adapterName, path, data, done);
-        if (handlePromiseResult(result, done, true)) {
+        if (handlePromiseResult(traceId, result, done, true)) {
           return;
         }
       }
+      if (typeof socket.emit !== "function") {
+        throw new Error(
+          `Socket has no writeFile/writeFile64/emit method for ${adapterName}/${path}.`,
+        );
+      }
+      appendDiagnostic("info", `[${traceId}] trying raw socket.emit writeFile`, {
+        adapterName,
+        path,
+        bytes: data.length,
+      });
       socket.emit("writeFile", adapterName, path, data, done);
     } catch (error) {
       settled = true;
       window.clearTimeout(timeout);
-      logFileOperation("write", adapterName, path, "failed", readError(error) ?? String(error));
+      logFileOperation(
+        traceId,
+        "write",
+        adapterName,
+        path,
+        "failed",
+        readError(error) ?? String(error),
+      );
       reject(error instanceof Error ? error : new Error(String(error)));
     }
   });
 }
 
 function handlePromiseResult(
+  traceId: string,
   result: Promise<unknown> | void,
   done: (response?: unknown) => void,
   resolveUndefined = false,
@@ -137,6 +253,7 @@ function handlePromiseResult(
   if (!result || typeof result.then !== "function") {
     return false;
   }
+  appendDiagnostic("info", `[${traceId}] file API returned promise`);
   result.then((response) => {
     if (response !== undefined || resolveUndefined) {
       done(response);
@@ -209,6 +326,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function logFileOperation(
+  traceId: string,
   operation: "read" | "write",
   adapterName: string,
   path: string,
@@ -218,6 +336,6 @@ function logFileOperation(
   const suffix = detail ? `: ${detail}` : "";
   appendDiagnostic(
     status === "failed" ? "error" : status === "skipped" ? "warn" : "info",
-    `${operation} ${adapterName}/${path} ${status}${suffix}`,
+    `[${traceId}] ${operation} ${adapterName}/${path} ${status}${suffix}`,
   );
 }

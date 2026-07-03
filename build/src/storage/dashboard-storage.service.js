@@ -9,47 +9,98 @@ class DashboardStorageService {
     constructor(adapter) {
         this.adapter = adapter;
     }
-    async loadDashboard(dashboardId = "default") {
-        await this.ensureDirectories();
+    async loadDashboard(dashboardId = "default", traceId = "storage-load") {
+        this.logTrace("info", traceId, "load start", { dashboardId });
+        await this.ensureDirectories(traceId);
         const fileName = this.dashboardFileName(dashboardId);
         let raw;
         try {
-            this.adapter.log.debug(`Reading dashboard "${dashboardId}" from ${fileName}.`);
+            this.logTrace("info", traceId, "read file start", { dashboardId, fileName });
             raw = await this.adapter.readFileAsync(this.adapter.name, fileName);
+            this.logTrace("info", traceId, "read file ok", {
+                dashboardId,
+                fileName,
+                content: describeFileContent(raw),
+            });
         }
         catch (error) {
             if (isMissingFileError(error)) {
-                this.adapter.log.info(`Dashboard "${dashboardId}" does not exist yet. Creating default dashboard at ${fileName}.`);
+                this.logTrace("warn", traceId, "dashboard file missing, creating default", {
+                    dashboardId,
+                    fileName,
+                    error: readError(error),
+                });
                 const dashboard = (0, src_1.createDefaultDashboard)({ projectId: dashboardId });
-                await this.saveDashboard(dashboardId, dashboard);
+                await this.saveDashboard(dashboardId, dashboard, traceId);
                 return {
                     dashboard,
                     migrated: false,
                     validation: (0, src_1.validateDashboardProject)(dashboard),
                 };
             }
+            this.logTrace("error", traceId, "read file failed", {
+                dashboardId,
+                fileName,
+                error: readError(error),
+            });
             throw error;
         }
-        const parsed = JSON.parse(fileContentToString(raw));
+        const rawText = fileContentToString(raw);
+        let parsed;
+        try {
+            parsed = JSON.parse(rawText);
+            this.logTrace("info", traceId, "json parse ok", {
+                dashboardId,
+                fileName,
+                bytes: rawText.length,
+            });
+        }
+        catch (error) {
+            this.logTrace("error", traceId, "json parse failed", {
+                dashboardId,
+                fileName,
+                bytes: rawText.length,
+                error: readError(error),
+            });
+            throw error;
+        }
         const migration = (0, src_1.migrateDashboardProject)(parsed);
+        this.logTrace("info", traceId, "migration finished", {
+            dashboardId,
+            migrated: migration.migrated,
+            validation: summarizeValidation(migration.validation),
+            dashboard: summarizeDashboard(migration.project),
+        });
         let backupFile;
         if (migration.migrated) {
-            backupFile = await this.writeBackup(dashboardId, migration.backup);
-            await this.writeDashboardFile(dashboardId, migration.project);
-            this.adapter.log.info(`Migrated dashboard "${dashboardId}" to schema version ${migration.project.schemaVersion}.`);
+            backupFile = await this.writeBackup(dashboardId, migration.backup, traceId);
+            await this.writeDashboardFile(dashboardId, migration.project, traceId);
+            this.logTrace("info", traceId, "migration saved", {
+                dashboardId,
+                schemaVersion: migration.project.schemaVersion,
+                backupFile,
+            });
         }
         const stored = {
             dashboard: migration.project,
             migrated: migration.migrated,
             validation: migration.validation,
         };
-        this.adapter.log.debug(`Loaded dashboard "${dashboardId}" with ${stored.dashboard.components.length} components.`);
+        this.logTrace("info", traceId, "load ok", {
+            dashboardId,
+            backupFile,
+            dashboard: summarizeDashboard(stored.dashboard),
+        });
         if (backupFile) {
             stored.backupFile = backupFile;
         }
         return stored;
     }
-    async saveDashboard(dashboardId, dashboard) {
+    async saveDashboard(dashboardId, dashboard, traceId = "storage-save") {
+        this.logTrace("info", traceId, "save start", {
+            dashboardId,
+            dashboard: summarizeDashboard(dashboard),
+        });
         const next = {
             ...dashboard,
             projectId: dashboard.projectId || dashboardId,
@@ -57,41 +108,103 @@ class DashboardStorageService {
         };
         const validation = (0, src_1.validateDashboardProject)(next);
         if (!validation.valid) {
+            this.logTrace("error", traceId, "validation failed", {
+                dashboardId,
+                validation: summarizeValidation(validation),
+            });
             throw new Error(`Dashboard validation failed: ${validation.issues.map((issue) => issue.message).join("; ")}`);
         }
-        await this.ensureDirectories();
-        await this.writeDashboardFile(dashboardId, next);
-        this.adapter.log.info(`Saved dashboard "${dashboardId}" with ${next.components.length} components to ${this.dashboardFileName(dashboardId)}.`);
+        this.logTrace("info", traceId, "validation ok", {
+            dashboardId,
+            validation: summarizeValidation(validation),
+            dashboard: summarizeDashboard(next),
+        });
+        await this.ensureDirectories(traceId);
+        await this.writeDashboardFile(dashboardId, next, traceId);
+        this.logTrace("info", traceId, "save ok", {
+            dashboardId,
+            fileName: this.dashboardFileName(dashboardId),
+            dashboard: summarizeDashboard(next),
+        });
         if (this.adapter.setStateAsync) {
-            await this.adapter.setStateAsync("info.lastDashboardSave", Date.now(), true);
+            try {
+                await this.adapter.setStateAsync("info.lastDashboardSave", Date.now(), true);
+                this.logTrace("info", traceId, "lastDashboardSave state updated", { dashboardId });
+            }
+            catch (error) {
+                this.logTrace("warn", traceId, "lastDashboardSave state update failed", {
+                    dashboardId,
+                    error: readError(error),
+                });
+            }
         }
         return next;
     }
     async listDashboardIds() {
         return ["default"];
     }
-    async writeDashboardFile(dashboardId, dashboard) {
-        await this.adapter.writeFileAsync(this.adapter.name, this.dashboardFileName(dashboardId), `${JSON.stringify(dashboard, null, 2)}\n`);
+    async writeDashboardFile(dashboardId, dashboard, traceId) {
+        const fileName = this.dashboardFileName(dashboardId);
+        const serialized = `${JSON.stringify(dashboard, null, 2)}\n`;
+        this.logTrace("info", traceId, "write file start", {
+            dashboardId,
+            fileName,
+            bytes: serialized.length,
+        });
+        await this.adapter.writeFileAsync(this.adapter.name, fileName, serialized);
+        this.logTrace("info", traceId, "write file ok", {
+            dashboardId,
+            fileName,
+            bytes: serialized.length,
+        });
     }
-    async writeBackup(dashboardId, backup) {
+    async writeBackup(dashboardId, backup, traceId) {
         const backupFile = `${BACKUP_DIR}/${(0, src_1.sanitizeDashboardFilePart)(dashboardId)}-${Date.now()}.json`;
-        await this.adapter.writeFileAsync(this.adapter.name, backupFile, `${JSON.stringify(backup, null, 2)}\n`);
+        const serialized = `${JSON.stringify(backup, null, 2)}\n`;
+        this.logTrace("info", traceId, "write backup start", {
+            dashboardId,
+            backupFile,
+            bytes: serialized.length,
+        });
+        await this.adapter.writeFileAsync(this.adapter.name, backupFile, serialized);
+        this.logTrace("info", traceId, "write backup ok", {
+            dashboardId,
+            backupFile,
+            bytes: serialized.length,
+        });
         return backupFile;
     }
-    async ensureDirectories() {
+    async ensureDirectories(traceId) {
         if (!this.adapter.mkdirAsync) {
+            this.logTrace("warn", traceId, "mkdirAsync not available");
             return;
         }
         try {
+            this.logTrace("info", traceId, "ensure directories start", {
+                directories: `${DASHBOARD_DIR},${BACKUP_DIR}`,
+            });
             await this.adapter.mkdirAsync(this.adapter.name, DASHBOARD_DIR);
             await this.adapter.mkdirAsync(this.adapter.name, BACKUP_DIR);
+            this.logTrace("info", traceId, "ensure directories ok");
         }
         catch (error) {
-            this.adapter.log.debug(`Directory creation skipped or already done: ${String(error)}`);
+            this.logTrace("warn", traceId, "ensure directories skipped or failed", {
+                error: readError(error),
+            });
         }
     }
     dashboardFileName(dashboardId) {
         return `${DASHBOARD_DIR}/${(0, src_1.sanitizeDashboardFilePart)(dashboardId)}.json`;
+    }
+    logTrace(level, traceId, message, details) {
+        const suffix = details ? ` ${formatDetails(details)}` : "";
+        const line = `[${traceId}] storage ${message}${suffix}`;
+        this.adapter.log[level](line);
+        if (this.adapter.setStateAsync) {
+            void this.adapter
+                .setStateAsync("info.lastDebugLog", trimDebugLine(line), true)
+                .catch((error) => this.adapter.log.debug(`Could not update info.lastDebugLog: ${readError(error)}`));
+        }
     }
 }
 exports.DashboardStorageService = DashboardStorageService;
@@ -115,5 +228,67 @@ function isMissingFileError(error) {
         return false;
     }
     return /not found|ENOENT|does not exist|not exists/i.test(error.message);
+}
+function summarizeDashboard(dashboard) {
+    return [
+        `projectId=${dashboard.projectId}`,
+        `schema=${dashboard.schemaVersion}`,
+        `pages=${dashboard.pages.length}`,
+        `components=${dashboard.components.length}`,
+        `bindings=${dashboard.bindings.length}`,
+        `actions=${dashboard.actions.length}`,
+        `layouts=${Object.keys(dashboard.layouts).length}`,
+        `updatedAt=${dashboard.updatedAt}`,
+    ].join(",");
+}
+function summarizeValidation(validation) {
+    if (validation.valid) {
+        return "valid";
+    }
+    return validation.issues
+        .slice(0, 6)
+        .map((issue) => `${issue.path}:${issue.message}`)
+        .join(" | ");
+}
+function describeFileContent(value) {
+    if (Buffer.isBuffer(value)) {
+        return `Buffer(${value.length})`;
+    }
+    if (typeof value === "string") {
+        return `string(${value.length})`;
+    }
+    if (value.file !== undefined) {
+        return `object.file=${describeFileContent(value.file)}`;
+    }
+    if (value.data !== undefined) {
+        return `object.data=${describeFileContent(value.data)}`;
+    }
+    return "unknown";
+}
+function formatDetails(details) {
+    return Object.entries(details)
+        .map(([key, value]) => `${key}=${formatDetailValue(value)}`)
+        .join(" ");
+}
+function formatDetailValue(value) {
+    if (value instanceof Error) {
+        return JSON.stringify(value.message);
+    }
+    if (typeof value === "string") {
+        return JSON.stringify(trimDebugLine(value));
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+    }
+    if (value === null || value === undefined) {
+        return String(value);
+    }
+    return JSON.stringify(trimDebugLine(String(value)));
+}
+function trimDebugLine(value) {
+    return value.length <= 1000 ? value : `${value.slice(0, 1000)}...`;
+}
+function readError(error) {
+    return error instanceof Error ? error.message : String(error);
 }
 //# sourceMappingURL=dashboard-storage.service.js.map

@@ -1,4 +1,4 @@
-import { appendDiagnostic } from "./diagnostics";
+import { appendDiagnostic, describeDiagnosticValue } from "./diagnostics";
 
 export interface IoBrokerCommandResponse<T> {
   ok: boolean;
@@ -30,7 +30,12 @@ export interface IoBrokerSocketLike {
     path: string,
     data: ArrayBuffer | string,
   ): Promise<unknown> | void;
-  emit(event: string, ...args: unknown[]): void;
+  emit?(event: string, ...args: unknown[]): void;
+}
+
+export interface IoBrokerCommandOptions {
+  traceId?: string;
+  timeoutMs?: number;
 }
 
 type IoBrokerSocketFactory = {
@@ -58,52 +63,70 @@ export async function sendIoBrokerCommand<T>(
   adapterName: string,
   command: string,
   payload: unknown,
+  options: IoBrokerCommandOptions = {},
 ): Promise<T | undefined> {
-  const socket = await resolveIoBrokerSocket();
+  const traceId = options.traceId ?? command;
+  const socket = await resolveIoBrokerSocket(traceId);
   if (!socket) {
-    appendDiagnostic("warn", `sendTo ${command} skipped: no ioBroker socket`);
+    appendDiagnostic("warn", `[${traceId}] sendTo ${command} skipped: no ioBroker socket`);
     return undefined;
   }
 
   const instance = `${adapterName}.${readIoBrokerAdapterInstance(adapterName) ?? 0}`;
-  appendDiagnostic(
-    "info",
-    `sendTo ${command} start target=${instance} capabilities=${describeIoBrokerSocket(socket)}`,
-  );
+  appendDiagnostic("info", `[${traceId}] sendTo ${command} start`, {
+    target: instance,
+    capabilities: describeIoBrokerSocket(socket),
+    payload: summarizeCommandPayload(payload),
+  });
   return new Promise((resolve, reject) => {
     let settled = false;
     const timeout = window.setTimeout(() => {
       settled = true;
-      appendDiagnostic("error", `sendTo ${command} failed: timeout target=${instance}`);
+      appendDiagnostic("error", `[${traceId}] sendTo ${command} failed`, {
+        reason: "timeout",
+        target: instance,
+        timeoutMs: options.timeoutMs ?? 8000,
+      });
       reject(new Error(`Command ${command} timed out.`));
-    }, 8000);
+    }, options.timeoutMs ?? 8000);
 
     const done = (response: unknown) => {
       if (settled) {
+        appendDiagnostic("warn", `[${traceId}] sendTo ${command} ignored late response`, {
+          response: describeDiagnosticValue(response),
+        });
         return;
       }
       settled = true;
       window.clearTimeout(timeout);
+      appendDiagnostic("info", `[${traceId}] sendTo ${command} response received`, {
+        response: describeDiagnosticValue(response),
+      });
       const normalized = normalizeResponse<T>(response);
       if (!normalized.ok) {
-        appendDiagnostic(
-          "error",
-          `sendTo ${command} failed: ${normalized.error ?? "ioBroker command failed"}`,
-        );
+        appendDiagnostic("error", `[${traceId}] sendTo ${command} failed`, {
+          error: normalized.error ?? "ioBroker command failed",
+        });
         reject(new Error(normalized.error ?? `Command ${command} failed.`));
         return;
       }
-      appendDiagnostic("info", `sendTo ${command} ok`);
+      appendDiagnostic("info", `[${traceId}] sendTo ${command} ok`, {
+        data: describeDiagnosticValue(normalized.data),
+      });
       resolve(normalized.data);
     };
 
     try {
       if (typeof socket.sendTo === "function") {
-        appendDiagnostic("info", `sendTo ${command} using socket.sendTo`);
+        appendDiagnostic("info", `[${traceId}] sendTo ${command} using socket.sendTo`);
         const result = socket.sendTo(instance, command, payload, done);
         if (result && typeof result.then === "function") {
+          appendDiagnostic("info", `[${traceId}] sendTo ${command} returned promise`);
           result
             .then((response: unknown) => {
+              appendDiagnostic("info", `[${traceId}] sendTo ${command} promise resolved`, {
+                response: describeDiagnosticValue(response),
+              });
               if (response !== undefined) {
                 done(response);
               }
@@ -114,38 +137,55 @@ export async function sendIoBrokerCommand<T>(
               }
               settled = true;
               window.clearTimeout(timeout);
+              appendDiagnostic("error", `[${traceId}] sendTo ${command} promise rejected`, {
+                error: readError(error),
+              });
               reject(error instanceof Error ? error : new Error(String(error)));
             });
+        } else {
+          appendDiagnostic("info", `[${traceId}] sendTo ${command} waiting for callback`);
         }
         return;
       }
 
-      appendDiagnostic("info", `sendTo ${command} using raw socket.emit`);
+      if (typeof socket.emit !== "function") {
+        throw new Error(`Socket has no sendTo or emit method for command ${command}.`);
+      }
+      appendDiagnostic("info", `[${traceId}] sendTo ${command} using raw socket.emit`);
       socket.emit("sendTo", instance, command, payload, done);
     } catch (error) {
       settled = true;
       window.clearTimeout(timeout);
-      appendDiagnostic("error", `sendTo ${command} failed: ${readError(error)}`);
+      appendDiagnostic("error", `[${traceId}] sendTo ${command} failed`, {
+        error: readError(error),
+      });
       reject(error instanceof Error ? error : new Error(String(error)));
     }
   });
 }
 
-export async function resolveIoBrokerSocket(): Promise<IoBrokerSocketLike | undefined> {
+export async function resolveIoBrokerSocket(
+  traceId = "socket",
+): Promise<IoBrokerSocketLike | undefined> {
   const existing = readExistingSocket();
   if (existing) {
     window.socket = existing;
-    appendDiagnostic("info", `ioBroker socket resolved: ${describeIoBrokerSocket(existing)}`);
+    appendDiagnostic("info", `[${traceId}] ioBroker socket resolved`, {
+      capabilities: describeIoBrokerSocket(existing),
+      source: "existing-window",
+      location: window.location.href,
+    });
     return existing;
   }
 
-  socketPromise ??= createSocket();
+  socketPromise ??= createSocket(traceId);
   const socket = await socketPromise;
   appendDiagnostic(
     socket ? "info" : "warn",
+    socket ? `[${traceId}] ioBroker socket created` : `[${traceId}] ioBroker socket not available`,
     socket
-      ? `ioBroker socket created: ${describeIoBrokerSocket(socket)}`
-      : "ioBroker socket not available",
+      ? { capabilities: describeIoBrokerSocket(socket) }
+      : { location: window.location.href, search: window.location.search },
   );
   return socket;
 }
@@ -186,15 +226,18 @@ function readExistingSocket(): IoBrokerSocketLike | undefined {
   });
 }
 
-async function createSocket(): Promise<IoBrokerSocketLike | undefined> {
-  appendDiagnostic("info", "Loading /socket.io/socket.io.js for ioBroker socket fallback");
+async function createSocket(traceId: string): Promise<IoBrokerSocketLike | undefined> {
+  appendDiagnostic("info", `[${traceId}] Loading /socket.io/socket.io.js for socket fallback`);
   await ensureSocketIoScript();
   const factory = readWindowValue((candidate) => candidate.io);
   if (!factory) {
-    appendDiagnostic("warn", "No ioBroker socket factory found after socket.io script load");
+    appendDiagnostic("warn", `[${traceId}] No socket factory found after script load`);
     return undefined;
   }
 
+  appendDiagnostic("info", `[${traceId}] Socket factory found`, {
+    hasConnect: typeof factory.connect === "function",
+  });
   const socket = factory.connect ? factory.connect() : factory();
   window.socket = socket;
   return socket;
@@ -297,4 +340,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function readError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function summarizeCommandPayload(payload: unknown): string {
+  if (!isRecord(payload)) {
+    return describeDiagnosticValue(payload);
+  }
+  if (isRecord(payload.dashboard)) {
+    const dashboard = payload.dashboard;
+    return describeDiagnosticValue({
+      dashboardId: payload.dashboardId,
+      debugTraceId: payload.debugTraceId,
+      projectId: dashboard.projectId,
+      schemaVersion: dashboard.schemaVersion,
+      pages: Array.isArray(dashboard.pages) ? dashboard.pages.length : undefined,
+      components: Array.isArray(dashboard.components) ? dashboard.components.length : undefined,
+      bindings: Array.isArray(dashboard.bindings) ? dashboard.bindings.length : undefined,
+      updatedAt: dashboard.updatedAt,
+    });
+  }
+  return describeDiagnosticValue(payload);
 }

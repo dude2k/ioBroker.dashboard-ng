@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.10",
+    "version": "0.3.11",
     "news": {
+      "0.3.11": {
+        "en": "Added trace-based Editor, socket, sendTo and adapter storage diagnostics plus info.lastDebugLog.",
+        "de": "Trace-basierte Editor-, Socket-, sendTo- und Adapter-Storage-Diagnose plus info.lastDebugLog ergaenzt.",
+        "ru": "Dobavlena trace diagnostika Editor, socket, sendTo i adapter storage plyus info.lastDebugLog.",
+        "pt": "Adicionada diagnostica com trace para Editor, socket, sendTo e adapter storage, mais info.lastDebugLog.",
+        "nl": "Trace-gebaseerde Editor-, socket-, sendTo- en adapteropslagdiagnostiek plus info.lastDebugLog toegevoegd.",
+        "fr": "Diagnostics par trace pour Editor, socket, sendTo et stockage adapter, plus info.lastDebugLog.",
+        "it": "Aggiunta diagnostica con trace per Editor, socket, sendTo e storage adapter, piu info.lastDebugLog.",
+        "es": "Agregada diagnostica con trace para Editor, socket, sendTo y almacenamiento del adapter, mas info.lastDebugLog.",
+        "pl": "Dodano diagnostyke trace dla Editor, socket, sendTo i storage adaptera oraz info.lastDebugLog.",
+        "uk": "Dodano trace diahnostyku Editor, socket, sendTo i adapter storage plyus info.lastDebugLog.",
+        "zh-cn": "Added trace-based Editor, socket, sendTo and adapter storage diagnostics plus info.lastDebugLog."
+      },
       "0.3.10": {
         "en": "Added copyable Editor diagnostics for dashboard load/save debugging and made frontend logging safe.",
         "de": "Kopierbare Editor-Diagnose fuer Dashboard-Laden/Speichern ergaenzt und Frontend-Logging abgesichert.",
@@ -298,6 +311,19 @@
         "read": true,
         "write": false,
         "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.lastDebugLog",
+      "type": "state",
+      "common": {
+        "role": "text",
+        "name": "Last debug log",
+        "type": "string",
+        "read": true,
+        "write": false,
+        "def": ""
       },
       "native": {}
     }

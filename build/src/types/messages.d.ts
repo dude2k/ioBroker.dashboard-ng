@@ -14,24 +14,30 @@ export interface CommandResponse<T> {
     warnings?: string[];
 }
 export interface LoadDashboardPayload {
+    debugTraceId?: string;
     dashboardId?: string;
 }
 export interface SaveDashboardPayload {
+    debugTraceId?: string;
     dashboardId?: string;
     dashboard: DashboardProject;
 }
 export interface ImportDashboardPayload {
+    debugTraceId?: string;
     dashboardId?: string;
     bundle: DashboardExportBundle | DashboardProject | unknown;
 }
 export interface SearchObjectsPayload {
+    debugTraceId?: string;
     query?: string;
     limit?: number;
 }
 export interface ReadStatesPayload {
+    debugTraceId?: string;
     stateIds: string[];
 }
 export interface WriteStatePayload {
+    debugTraceId?: string;
     stateId: string;
     value: StatePrimitive;
 }

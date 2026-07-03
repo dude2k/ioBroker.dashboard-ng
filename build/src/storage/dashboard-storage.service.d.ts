@@ -26,11 +26,12 @@ export interface StoredDashboard {
 export declare class DashboardStorageService {
     private readonly adapter;
     constructor(adapter: AdapterFileApi);
-    loadDashboard(dashboardId?: string): Promise<StoredDashboard>;
-    saveDashboard(dashboardId: string, dashboard: DashboardProject): Promise<DashboardProject>;
+    loadDashboard(dashboardId?: string, traceId?: string): Promise<StoredDashboard>;
+    saveDashboard(dashboardId: string, dashboard: DashboardProject, traceId?: string): Promise<DashboardProject>;
     listDashboardIds(): Promise<string[]>;
     private writeDashboardFile;
     private writeBackup;
     private ensureDirectories;
     private dashboardFileName;
+    private logTrace;
 }
