@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.14",
+    "version": "0.3.15",
     "news": {
+      "0.3.15": {
+        "en": "Added Viewer page tabs and kept wide desktop browsers on the desktop layout before switching to wall layout at 1920px.",
+        "de": "Viewer-Seitentabs ergaenzt und breite Desktop-Browser bleiben bis 1920px im Desktop-Layout statt ins Wall-Layout zu wechseln.",
+        "ru": "Dobavleny vkladki stranits Viewer, a shirokie desktop browsery ostayutsya v desktop layout do 1920px.",
+        "pt": "Adicionadas abas de paginas no Viewer e navegadores desktop largos ficam no layout desktop ate 1920px.",
+        "nl": "Viewer-paginatabs toegevoegd en brede desktopbrowsers blijven tot 1920px in desktop-layout.",
+        "fr": "Onglets de pages Viewer ajoutes et les navigateurs desktop larges restent en layout desktop jusqu'a 1920px.",
+        "it": "Aggiunte schede pagina nel Viewer e i browser desktop larghi restano nel layout desktop fino a 1920px.",
+        "es": "Agregadas pestanas de pagina en Viewer y navegadores desktop anchos se quedan en layout desktop hasta 1920px.",
+        "pl": "Dodano zakladki stron Viewer, a szerokie przegladarki desktop pozostaja w layout desktop do 1920px.",
+        "uk": "Dodano vkladky storinok Viewer, a shyroki desktop browsery zalyshayutsya v desktop layout do 1920px.",
+        "zh-cn": "Added Viewer page tabs and kept wide desktop browsers on the desktop layout before switching to wall layout at 1920px."
+      },
       "0.3.14": {
         "en": "Made the Viewer load dashboards through adapter sendTo before the web file URL and added Viewer load diagnostics.",
         "de": "Viewer laedt Dashboards nun zuerst ueber Adapter-sendTo statt Web-Datei-URL und erhaelt Lade-Diagnose.",

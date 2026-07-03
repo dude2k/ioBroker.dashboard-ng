@@ -23,7 +23,7 @@ export function resolveRuntimeBreakpoint(width: number): DashboardBreakpoint {
     return "tablet";
   }
 
-  if (width < 1440) {
+  if (width < 1920) {
     return "desktop";
   }
 

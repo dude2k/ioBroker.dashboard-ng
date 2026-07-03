@@ -6,6 +6,7 @@ describe("runtime layout", () => {
     expect(resolveRuntimeBreakpoint(390)).toBe("phone");
     expect(resolveRuntimeBreakpoint(800)).toBe("tablet");
     expect(resolveRuntimeBreakpoint(1280)).toBe("desktop");
-    expect(resolveRuntimeBreakpoint(1600)).toBe("wall");
+    expect(resolveRuntimeBreakpoint(1600)).toBe("desktop");
+    expect(resolveRuntimeBreakpoint(1920)).toBe("wall");
   });
 });

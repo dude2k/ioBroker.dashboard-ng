@@ -19,6 +19,7 @@ type WakeLockSentinel = {
 
 export function ViewerApp() {
   const [project, setProject] = useState<DashboardProject | undefined>();
+  const [activePageId, setActivePageId] = useState<string | undefined>();
   const [stateValues, setStateValues] = useState<RuntimeStateValues>({});
   const [online, setOnline] = useState(true);
   const [loadError, setLoadError] = useState<string | undefined>();
@@ -28,7 +29,8 @@ export function ViewerApp() {
     typeof window === "undefined" ? 1024 : window.innerWidth,
   );
   const page = project
-    ? (project.pages.find((candidate) => candidate.pageId === project.settings.activePageId) ??
+    ? (project.pages.find((candidate) => candidate.pageId === activePageId) ??
+      project.pages.find((candidate) => candidate.pageId === project.settings.activePageId) ??
       project.pages[0])
     : undefined;
   const activeThemeId = project?.settings.activeThemeId;
@@ -60,6 +62,7 @@ export function ViewerApp() {
       .loadDashboard()
       .then((dashboard) => {
         setProject(dashboard);
+        setActivePageId(dashboard.settings.activePageId || dashboard.pages[0]?.pageId);
         setOnline(true);
         setLoadError(undefined);
       })
@@ -135,7 +138,13 @@ export function ViewerApp() {
 
   async function reload() {
     try {
-      setProject(await viewerClient.loadDashboard());
+      const dashboard = await viewerClient.loadDashboard();
+      setProject(dashboard);
+      setActivePageId((current) =>
+        current && dashboard.pages.some((candidate) => candidate.pageId === current)
+          ? current
+          : dashboard.settings.activePageId || dashboard.pages[0]?.pageId,
+      );
       setOnline(true);
       setLoadError(undefined);
     } catch {
@@ -181,6 +190,32 @@ export function ViewerApp() {
         </div>
       ) : null}
 
+      {project && project.pages.length > 1 && !page?.settings.hideNavigation ? (
+        <nav className="viewer-page-tabs" aria-label="Dashboard pages">
+          <div className="viewer-page-tab-list" role="tablist">
+            {project.pages
+              .slice()
+              .sort((left, right) => left.order - right.order)
+              .map((candidate) => (
+                <button
+                  aria-selected={candidate.pageId === page?.pageId}
+                  className={
+                    candidate.pageId === page?.pageId
+                      ? "viewer-page-tab is-active"
+                      : "viewer-page-tab"
+                  }
+                  key={candidate.pageId}
+                  role="tab"
+                  title={candidate.name}
+                  onClick={() => setActivePageId(candidate.pageId)}
+                >
+                  {candidate.name}
+                </button>
+              ))}
+          </div>
+        </nav>
+      ) : null}
+
       {project ? (
         <main
           className={`viewer-grid viewer-grid-${breakpoint}`}
@@ -221,14 +256,9 @@ export function ViewerApp() {
                     setStateValues((current) => ({ ...current, [stateId]: nextValue }));
                   }}
                   onNavigate={(pageId) => {
-                    setProject((current) =>
-                      current
-                        ? {
-                            ...current,
-                            settings: { ...current.settings, activePageId: pageId },
-                          }
-                        : current,
-                    );
+                    if (project.pages.some((candidate) => candidate.pageId === pageId)) {
+                      setActivePageId(pageId);
+                    }
                   }}
                   onWriteState={(stateId, value) => viewerClient.writeState(stateId, value)}
                 />

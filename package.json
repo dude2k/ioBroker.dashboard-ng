@@ -1,6 +1,6 @@
 {
   "name": "iobroker.dashboard-ng",
-  "version": "0.3.14",
+  "version": "0.3.15",
   "description": "Modern responsive dashboard adapter for ioBroker.",
   "keywords": [
     "ioBroker",
