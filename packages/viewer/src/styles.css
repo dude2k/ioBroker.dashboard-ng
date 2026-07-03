@@ -176,7 +176,7 @@ button {
 .viewer-grid {
   display: grid;
   gap: 0;
-  margin: 0 auto;
+  margin: 0;
   min-height: calc(100vh - 104px);
   max-width: 100%;
   overflow: auto;

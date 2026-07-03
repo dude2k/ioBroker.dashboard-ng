@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.15",
+    "version": "0.3.16",
     "news": {
+      "0.3.16": {
+        "en": "Left-aligned the Viewer grid so dashboards start at the page edge instead of being horizontally centered.",
+        "de": "Viewer-Grid linksbuendig ausgerichtet, damit Dashboards am Seitenrand starten statt horizontal zentriert zu sein.",
+        "ru": "Viewer grid vyrovnen vlevo, chtoby dashboardy nachinalis ot kraya stranitsy vmesto gorizontalnogo tsentra.",
+        "pt": "Grade do Viewer alinhada a esquerda para dashboards iniciarem na borda da pagina em vez de ficarem centralizados.",
+        "nl": "Viewer-grid links uitgelijnd zodat dashboards aan de paginarand starten in plaats van horizontaal gecentreerd.",
+        "fr": "Grille Viewer alignee a gauche afin que les dashboards commencent au bord de la page au lieu d'etre centres.",
+        "it": "Griglia Viewer allineata a sinistra cosi i dashboard partono dal bordo pagina invece di essere centrati.",
+        "es": "Grid del Viewer alineado a la izquierda para que los dashboards empiecen en el borde de la pagina en vez de centrarse.",
+        "pl": "Siatka Viewer wyrownana do lewej, aby dashboardy zaczynaly sie od krawedzi strony zamiast byc centrowane.",
+        "uk": "Viewer grid vyrivnyano livoruch, shchob dashboardy pochynalysya vid krayu storinky zamist horyzontalnoho tsentru.",
+        "zh-cn": "Left-aligned the Viewer grid so dashboards start at the page edge instead of being horizontally centered."
+      },
       "0.3.15": {
         "en": "Added Viewer page tabs and kept wide desktop browsers on the desktop layout before switching to wall layout at 1920px.",
         "de": "Viewer-Seitentabs ergaenzt und breite Desktop-Browser bleiben bis 1920px im Desktop-Layout statt ins Wall-Layout zu wechseln.",
@@ -249,19 +262,6 @@
         "pl": "Wspolne srodowisko komponentow dla edytora i widoku oraz wszystkie renderery kart MVP.",
         "uk": "Спільне середовище виконання компонентів для редактора і переглядача, плюс усі рендерери MVP-карт.",
         "zh-cn": "编辑器和查看器共享组件运行时，并包含全部 MVP 卡片渲染器。"
-      },
-      "0.1.0": {
-        "en": "Initial MVP foundation with editor, viewer, schema, migrations and storage.",
-        "de": "Erste MVP-Grundlage mit Editor, Viewer, Schema, Migrationen und Speicherung.",
-        "ru": "Начальная основа MVP с редактором, просмотрщиком, схемой, миграциями и хранением.",
-        "pt": "Base inicial do MVP com editor, visualizador, esquema, migracoes e armazenamento.",
-        "nl": "Eerste MVP-basis met editor, viewer, schema, migraties en opslag.",
-        "fr": "Base MVP initiale avec editeur, visionneuse, schema, migrations et stockage.",
-        "it": "Base MVP iniziale con editor, visualizzatore, schema, migrazioni e archiviazione.",
-        "es": "Base MVP inicial con editor, visor, esquema, migraciones y almacenamiento.",
-        "pl": "Poczatkowa baza MVP z edytorem, widokiem, schematem, migracjami i zapisem.",
-        "uk": "Початкова основа MVP з редактором, переглядачем, схемою, міграціями та зберіганням.",
-        "zh-cn": "带有编辑器、查看器、架构、迁移和存储的初始 MVP 基础。"
       }
     },
     "titleLang": {
