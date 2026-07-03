@@ -4,7 +4,7 @@ Modern responsive dashboards for ioBroker.
 
 ## Project Status
 
-**Dashboard-NG is not finished yet.** Version `0.3.12` is an installable alpha
+**Dashboard-NG is not finished yet.** Version `0.3.13` is an installable alpha
 baseline for early testing and development. The adapter can be installed from
 GitHub and an instance can run, but the complete MVP feature set from
 `docs/MVP_COMPLETION_TASK.md` is still in progress.
@@ -14,8 +14,8 @@ changes and possible breaking changes before a stable `1.0.0` release.
 
 ## Version
 
-- Current adapter version: `0.3.12`
-- Current GitHub tag: `v0.3.12`
+- Current adapter version: `0.3.13`
+- Current GitHub tag: `v0.3.13`
 - Release status: alpha / installable MVP foundation
 - Versioning scheme: SemVer-style package versions and Git tags named
   `vX.Y.Z`
@@ -161,6 +161,17 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 
 ## Changelog
 
+### 0.3.13 (2026-07-03)
+
+- Made Editor saves use the adapter `dashboard.save` command first instead of
+  the browser-side file write path that could corrupt the saved JSON.
+- Made save verification fatal so the Editor no longer reports `Saved` when the
+  written dashboard cannot be read back as the same JSON.
+- Added recovery for newer local Editor dashboards when adapter storage still
+  contains an older or broken file.
+- Added backend save read-back verification and kept the adapter running if the
+  startup dashboard load fails, so a later Editor save can repair storage.
+
 ### 0.3.12 (2026-07-03)
 
 - Fixed Editor/Admin socket creation by using `@iobroker/socket-client`
@@ -304,7 +315,7 @@ Dashboards. Nutzer sollen ohne HTML, CSS oder JavaScript schoene Dashboards
 erstellen koennen. Der MVP konzentriert sich auf Editor, Viewer, Grid-Layout,
 State-Binding, sichere Formeln, Import/Export, Themes und stabile Migrationen.
 
-Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.3.12` ist eine
+Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.3.13` ist eine
 installierbare Alpha-Grundlage fuer Tests und Weiterentwicklung, aber noch keine
 stabile Produktivversion.
 

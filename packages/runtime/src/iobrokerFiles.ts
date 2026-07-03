@@ -196,12 +196,14 @@ export async function writeIoBrokerFile(
 
     try {
       if (typeof socket.writeFile64 === "function") {
+        const encoded = new TextEncoder().encode(data);
         appendDiagnostic("info", `[${traceId}] trying socket.writeFile64`, {
           adapterName,
           path,
-          bytes: data.length,
+          bytes: encoded.byteLength,
+          encoding: "utf-8-arraybuffer",
         });
-        const result = socket.writeFile64(adapterName, path, data);
+        const result = socket.writeFile64(adapterName, path, encoded.buffer);
         if (handlePromiseResult(traceId, result, done, true)) {
           return;
         }

@@ -40,8 +40,15 @@ class DashboardNgAdapter extends utils.Adapter {
       namespace: this.namespace,
       adapterName: this.name,
     });
-    await this.storage.loadDashboard(dashboardId, traceId);
-    this.logTrace("info", traceId, "adapter ready ok", { dashboardId });
+    try {
+      await this.storage.loadDashboard(dashboardId, traceId);
+      this.logTrace("info", traceId, "adapter ready ok", { dashboardId });
+    } catch (error) {
+      this.logTrace("warn", traceId, "adapter ready dashboard load failed", {
+        dashboardId,
+        error: readError(error),
+      });
+    }
   }
 
   private onUnload(callback: () => void): void {

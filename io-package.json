@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.12",
+    "version": "0.3.13",
     "news": {
+      "0.3.13": {
+        "en": "Made Editor saves use adapter sendTo first, made save verification fatal, and added recovery for newer local dashboards.",
+        "de": "Editor-Speichern nutzt zuerst Adapter-sendTo, Save-Verifikation ist verbindlich und neuere lokale Dashboards werden wiederhergestellt.",
+        "ru": "Sohranenie Editor snachala ispolzuet adapter sendTo, proverka save teper obyazatelna, dobavleno vosstanovlenie bolee novyh lokalnyh dashboardov.",
+        "pt": "Salvamento do Editor usa primeiro adapter sendTo, verificacao de save agora e obrigatoria e dashboards locais mais novos sao recuperados.",
+        "nl": "Editor opslaan gebruikt eerst adapter sendTo, save-verificatie is verplicht en nieuwere lokale dashboards worden hersteld.",
+        "fr": "La sauvegarde Editor utilise d'abord adapter sendTo, la verification save est obligatoire et les dashboards locaux plus recents sont recuperes.",
+        "it": "Il salvataggio Editor usa prima adapter sendTo, la verifica save e obbligatoria e i dashboard locali piu recenti vengono recuperati.",
+        "es": "El guardado del Editor usa primero adapter sendTo, la verificacion de save es obligatoria y se recuperan dashboards locales mas nuevos.",
+        "pl": "Zapis Editor uzywa najpierw adapter sendTo, weryfikacja save jest obowiazkowa i nowsze lokalne dashboardy sa odzyskiwane.",
+        "uk": "Zberezhennya Editor spochatku vykorystovuye adapter sendTo, perevirka save obovyazkova, novishi lokalni dashboardy vidnovlyuyutsya.",
+        "zh-cn": "Made Editor saves use adapter sendTo first, made save verification fatal, and added recovery for newer local dashboards."
+      },
       "0.3.12": {
         "en": "Fixed Editor admin socket creation by using @iobroker/socket-client AdminConnection instead of a raw emit-only socket.",
         "de": "Editor-Admin-Socket-Erzeugung korrigiert: nutzt nun @iobroker/socket-client AdminConnection statt raw emit-only Socket.",

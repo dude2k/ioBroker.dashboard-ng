@@ -64,11 +64,11 @@ export class DashboardStorageService {
           error: readError(error),
         });
         const dashboard = createDefaultDashboard({ projectId: dashboardId });
-        await this.saveDashboard(dashboardId, dashboard, traceId);
+        const savedDashboard = await this.saveDashboard(dashboardId, dashboard, traceId);
         return {
-          dashboard,
+          dashboard: savedDashboard,
           migrated: false,
-          validation: validateDashboardProject(dashboard),
+          validation: validateDashboardProject(savedDashboard),
         };
       }
       this.logTrace("error", traceId, "read file failed", {
@@ -164,6 +164,7 @@ export class DashboardStorageService {
 
     await this.ensureDirectories(traceId);
     await this.writeDashboardFile(dashboardId, next, traceId);
+    await this.verifyDashboardFile(dashboardId, next, traceId);
     this.logTrace("info", traceId, "save ok", {
       dashboardId,
       fileName: this.dashboardFileName(dashboardId),
@@ -205,6 +206,38 @@ export class DashboardStorageService {
       fileName,
       bytes: serialized.length,
     });
+  }
+
+  private async verifyDashboardFile(
+    dashboardId: string,
+    expected: DashboardProject,
+    traceId: string,
+  ): Promise<void> {
+    const fileName = this.dashboardFileName(dashboardId);
+    this.logTrace("info", traceId, "verify file start", { dashboardId, fileName });
+    try {
+      const raw = await this.adapter.readFileAsync(this.adapter.name, fileName);
+      const rawText = fileContentToString(raw);
+      const verified = migrateDashboardProject(JSON.parse(rawText)).project;
+      const matches = JSON.stringify(verified) === JSON.stringify(expected);
+      this.logTrace(matches ? "info" : "error", traceId, "verify file finished", {
+        dashboardId,
+        fileName,
+        bytes: rawText.length,
+        expected: summarizeDashboard(expected),
+        actual: summarizeDashboard(verified),
+      });
+      if (!matches) {
+        throw new Error(`Saved dashboard verification failed for ${fileName}.`);
+      }
+    } catch (error) {
+      this.logTrace("error", traceId, "verify file failed", {
+        dashboardId,
+        fileName,
+        error: readError(error),
+      });
+      throw error instanceof Error ? error : new Error(String(error));
+    }
   }
 
   private async writeBackup(

@@ -155,13 +155,11 @@ describe("ioBroker socket helpers", () => {
 
     await writeIoBrokerFile("dashboard-ng", "dashboards/default.json", '{"ok":true}');
 
-    expect(writes).toEqual([
-      {
-        adapterName: "dashboard-ng",
-        path: "dashboards/default.json",
-        data: '{"ok":true}',
-      },
-    ]);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.adapterName).toBe("dashboard-ng");
+    expect(writes[0]?.path).toBe("dashboards/default.json");
+    expect(writes[0]?.data).toBeInstanceOf(ArrayBuffer);
+    expect(new TextDecoder().decode(writes[0]?.data as ArrayBuffer)).toBe('{"ok":true}');
   });
 });
 
