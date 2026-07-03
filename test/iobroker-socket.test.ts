@@ -67,6 +67,29 @@ describe("ioBroker socket helpers", () => {
     );
   });
 
+  it("does not treat an emit-only socket as usable ioBroker connection", async () => {
+    const socket: IoBrokerSocketLike = {
+      emit: vi.fn(),
+    };
+    const fakeWindow = {
+      location: {
+        href: "http://example.local/adapter/dashboard-ng/index_m.html?0",
+        search: "?0",
+      },
+      socket,
+      setTimeout: globalThis.setTimeout.bind(globalThis),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+    } as unknown as Window & { socket: IoBrokerSocketLike };
+    fakeWindow.parent = fakeWindow;
+    fakeWindow.top = fakeWindow;
+    vi.stubGlobal("window", fakeWindow);
+
+    await expect(sendIoBrokerCommand<string>("dashboard-ng", "dashboard.save", {})).resolves.toBe(
+      undefined,
+    );
+    expect(socket.emit).not.toHaveBeenCalled();
+  });
+
   it("reads adapter files through the ioBroker socket file API", async () => {
     const socket: IoBrokerSocketLike = {
       readFile: (_adapterName, _path, callback) => {

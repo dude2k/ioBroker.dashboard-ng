@@ -1,3 +1,4 @@
+import { AdminConnection, type ConnectionProps } from "@iobroker/socket-client";
 import { appendDiagnostic, describeDiagnosticValue } from "./diagnostics";
 
 export interface IoBrokerCommandResponse<T> {
@@ -39,20 +40,25 @@ export interface IoBrokerCommandOptions {
 }
 
 type IoBrokerSocketFactory = {
-  (url?: string, options?: Record<string, unknown>): IoBrokerSocketLike;
-  connect?: (url?: string, options?: Record<string, unknown>) => IoBrokerSocketLike;
+  (url?: string, options?: Record<string, unknown>): unknown;
+  connect?: (url?: string, options?: Record<string, unknown>) => unknown;
 };
 
 type IoBrokerWindow = Window & {
   io?: IoBrokerSocketFactory;
+  iob?: IoBrokerSocketFactory;
   socket?: IoBrokerSocketLike;
+  dashboardNgConnection?: IoBrokerSocketLike;
   adapterInstance?: number;
 };
 
 declare global {
   interface Window {
     io?: IoBrokerSocketFactory;
+    iob?: IoBrokerSocketFactory;
     socket?: IoBrokerSocketLike;
+    dashboardNgConnection?: IoBrokerSocketLike;
+    socketPath?: string;
     adapterInstance?: number;
   }
 }
@@ -218,27 +224,37 @@ export function parseIoBrokerAdapterInstance(
 
 function readExistingSocket(): IoBrokerSocketLike | undefined {
   return readWindowValue((candidate) => {
+    const dashboardConnection = candidate.dashboardNgConnection;
+    if (dashboardConnection && isUsableSocket(dashboardConnection)) {
+      return dashboardConnection;
+    }
     const socket = candidate.socket;
     if (socket && isUsableSocket(socket)) {
       return socket;
+    }
+    if (socket && typeof socket.emit === "function") {
+      appendDiagnostic("warn", "Ignoring emit-only socket without ioBroker helper methods", {
+        capabilities: describeIoBrokerSocket(socket),
+      });
     }
     return undefined;
   });
 }
 
 async function createSocket(traceId: string): Promise<IoBrokerSocketLike | undefined> {
-  appendDiagnostic("info", `[${traceId}] Loading /socket.io/socket.io.js for socket fallback`);
+  appendDiagnostic("info", `[${traceId}] Loading /socket.io/socket.io.js for AdminConnection`);
   await ensureSocketIoScript();
-  const factory = readWindowValue((candidate) => candidate.io);
+  const factory = readWindowValue((candidate) => candidate.io ?? candidate.iob);
   if (!factory) {
     appendDiagnostic("warn", `[${traceId}] No socket factory found after script load`);
     return undefined;
   }
 
-  appendDiagnostic("info", `[${traceId}] Socket factory found`, {
+  appendDiagnostic("info", `[${traceId}] Socket factory found for AdminConnection`, {
     hasConnect: typeof factory.connect === "function",
   });
-  const socket = factory.connect ? factory.connect() : factory();
+  const socket = await createAdminConnection(traceId, factory);
+  window.dashboardNgConnection = socket;
   window.socket = socket;
   return socket;
 }
@@ -261,8 +277,7 @@ function isUsableSocket(socket: IoBrokerSocketLike): boolean {
     typeof socket.sendTo === "function" ||
     typeof socket.readFile === "function" ||
     typeof socket.writeFile === "function" ||
-    typeof socket.writeFile64 === "function" ||
-    typeof socket.emit === "function"
+    typeof socket.writeFile64 === "function"
   );
 }
 
@@ -282,7 +297,11 @@ function normalizeResponse<T>(response: unknown): IoBrokerCommandResponse<T> {
 }
 
 async function ensureSocketIoScript(): Promise<void> {
-  if (readWindowValue((candidate) => candidate.io)) {
+  if (readWindowValue((candidate) => candidate.io ?? candidate.iob)) {
+    return;
+  }
+
+  if (typeof document === "undefined") {
     return;
   }
 
@@ -312,6 +331,96 @@ function readWindowValue<T>(reader: (candidate: IoBrokerWindow) => T | undefined
     }
   }
   return undefined;
+}
+
+async function createAdminConnection(
+  traceId: string,
+  factory: IoBrokerSocketFactory,
+): Promise<IoBrokerSocketLike> {
+  type SocketConnect = NonNullable<ConnectionProps["connect"]>;
+  const connect: SocketConnect = (url, options) => {
+    const nextOptions = {
+      ...options,
+      path: readRootSocketPath(options),
+    };
+    appendDiagnostic("info", `[${traceId}] AdminConnection connect`, {
+      url,
+      path: nextOptions.path,
+      name: nextOptions.name,
+      transports: Array.isArray(nextOptions.transports) ? nextOptions.transports.join(",") : "",
+    });
+    const connectFunction = factory.connect ?? factory;
+    return connectFunction(url, nextOptions) as ReturnType<SocketConnect>;
+  };
+
+  const connection = new AdminConnection({
+    name: "dashboard-ng",
+    protocol: readConnectionProtocol(),
+    host: window.location.hostname,
+    port: window.location.port || "",
+    admin5only: false,
+    autoSubscribes: [],
+    autoSubscribeLog: false,
+    doNotLoadACL: true,
+    doNotLoadAllObjects: true,
+    cmdTimeout: 10000,
+    ioTimeout: 20000,
+    connect,
+    onError: (error: unknown) => {
+      appendDiagnostic("error", `[${traceId}] AdminConnection error`, {
+        error: readError(error),
+      });
+    },
+    onProgress: (progress) => {
+      appendDiagnostic("info", `[${traceId}] AdminConnection progress`, { progress });
+    },
+  });
+
+  await withTimeout(
+    connection.waitForFirstConnection(),
+    15000,
+    () => new Error("AdminConnection did not become ready within 15000 ms."),
+  );
+  appendDiagnostic("info", `[${traceId}] AdminConnection ready`, {
+    capabilities: describeIoBrokerSocket(connection as unknown as IoBrokerSocketLike),
+  });
+  return connection as unknown as IoBrokerSocketLike;
+}
+
+function readConnectionProtocol(): NonNullable<ConnectionProps["protocol"]> {
+  return window.location.protocol === "https:" ? "https:" : "http:";
+}
+
+function readRootSocketPath(options: Record<string, unknown>): string {
+  if (typeof window.socketPath === "string" && window.socketPath) {
+    return window.socketPath.endsWith("/socket.io")
+      ? window.socketPath
+      : `${window.socketPath.replace(/\/$/, "")}/socket.io`;
+  }
+  if (typeof options.path === "string" && options.path === "/socket.io") {
+    return options.path;
+  }
+  return "/socket.io";
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  createError: () => Error,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(createError()), timeoutMs);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeout);
+        resolve(value);
+      },
+      (error: unknown) => {
+        window.clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
 }
 
 function safeWindow(read: () => Window | null): Window | undefined {

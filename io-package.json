@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.11",
+    "version": "0.3.12",
     "news": {
+      "0.3.12": {
+        "en": "Fixed Editor admin socket creation by using @iobroker/socket-client AdminConnection instead of a raw emit-only socket.",
+        "de": "Editor-Admin-Socket-Erzeugung korrigiert: nutzt nun @iobroker/socket-client AdminConnection statt raw emit-only Socket.",
+        "ru": "Ispravleno sozdanie Editor admin socket: ispolzuetsya @iobroker/socket-client AdminConnection vmesto raw emit-only socket.",
+        "pt": "Corrigida criacao do socket admin do Editor usando @iobroker/socket-client AdminConnection em vez de raw emit-only socket.",
+        "nl": "Editor admin socket-aanmaak opgelost met @iobroker/socket-client AdminConnection in plaats van raw emit-only socket.",
+        "fr": "Creation socket admin Editor corrigee avec @iobroker/socket-client AdminConnection au lieu d'un raw emit-only socket.",
+        "it": "Corretta creazione socket admin Editor usando @iobroker/socket-client AdminConnection invece di raw emit-only socket.",
+        "es": "Corregida la creacion del socket admin del Editor usando @iobroker/socket-client AdminConnection en vez de raw emit-only socket.",
+        "pl": "Naprawiono tworzenie socket admin Editor przez @iobroker/socket-client AdminConnection zamiast raw emit-only socket.",
+        "uk": "Vypravleno stvorennya Editor admin socket cherez @iobroker/socket-client AdminConnection zamist raw emit-only socket.",
+        "zh-cn": "Fixed Editor admin socket creation by using @iobroker/socket-client AdminConnection instead of a raw emit-only socket."
+      },
       "0.3.11": {
         "en": "Added trace-based Editor, socket, sendTo and adapter storage diagnostics plus info.lastDebugLog.",
         "de": "Trace-basierte Editor-, Socket-, sendTo- und Adapter-Storage-Diagnose plus info.lastDebugLog ergaenzt.",
