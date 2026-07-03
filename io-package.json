@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.13",
+    "version": "0.3.14",
     "news": {
+      "0.3.14": {
+        "en": "Made the Viewer load dashboards through adapter sendTo before the web file URL and added Viewer load diagnostics.",
+        "de": "Viewer laedt Dashboards nun zuerst ueber Adapter-sendTo statt Web-Datei-URL und erhaelt Lade-Diagnose.",
+        "ru": "Viewer teper zagruzhaet dashboard cherez adapter sendTo pered web file URL i poluchil diagnostiku zagruzki.",
+        "pt": "Viewer agora carrega dashboards via adapter sendTo antes da URL de arquivo web e adiciona diagnostica de carregamento.",
+        "nl": "Viewer laadt dashboards nu eerst via adapter sendTo voor de web-bestands-URL en heeft laaddiagnostiek.",
+        "fr": "Viewer charge maintenant les dashboards via adapter sendTo avant l'URL fichier web et ajoute des diagnostics de chargement.",
+        "it": "Viewer carica ora i dashboard tramite adapter sendTo prima della URL file web e aggiunge diagnostica di caricamento.",
+        "es": "Viewer carga ahora dashboards por adapter sendTo antes de la URL de archivo web y agrega diagnostico de carga.",
+        "pl": "Viewer laduje dashboardy najpierw przez adapter sendTo przed URL pliku web i dodaje diagnostyke ladowania.",
+        "uk": "Viewer teper zavantazhue dashboard cherez adapter sendTo pered web file URL i maye diahnostyku zavantazhennya.",
+        "zh-cn": "Made the Viewer load dashboards through adapter sendTo before the web file URL and added Viewer load diagnostics."
+      },
       "0.3.13": {
         "en": "Made Editor saves use adapter sendTo first, made save verification fatal, and added recovery for newer local dashboards.",
         "de": "Editor-Speichern nutzt zuerst Adapter-sendTo, Save-Verifikation ist verbindlich und neuere lokale Dashboards werden wiederhergestellt.",
