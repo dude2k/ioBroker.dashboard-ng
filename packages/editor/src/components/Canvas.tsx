@@ -16,6 +16,7 @@ import {
   DashboardRuntimeCard,
   clampGridPlacement,
   getGridBottom,
+  isComponentVisible,
   resolveComponentPlacement,
 } from "@dashboard-ng/runtime";
 import { getActivePage, getComponentBinding, useEditorStore } from "../store/editorStore";
@@ -197,16 +198,19 @@ export function Canvas() {
             layoutDraft?.componentId === component.componentId ? layoutDraft : undefined;
           const placement = activeDraft?.placement ?? storedPlacement;
           const binding = getComponentBinding(project, component);
+          const bindings = project.bindings.filter(
+            (item) => item.componentId === component.componentId,
+          );
           const locked = isEditorLocked(component);
           const hidden = isEditorHidden(component);
+          const conditionHidden = !isComponentVisible(component, bindings, stateValues);
           return (
             <ComponentTile
               bindingMissing={Boolean(binding?.missing)}
-              bindings={project.bindings.filter(
-                (item) => item.componentId === component.componentId,
-              )}
+              bindings={bindings}
               component={component}
               actions={project.actions.filter((item) => item.componentId === component.componentId)}
+              conditionHidden={conditionHidden}
               isHidden={hidden}
               isLocked={locked}
               isMoving={activeDraft?.kind === "move"}
@@ -269,6 +273,7 @@ interface ComponentTileProps {
   isSelected: boolean;
   isLocked: boolean;
   isHidden: boolean;
+  conditionHidden: boolean;
   isMoving: boolean;
   isResizing: boolean;
   bindingMissing: boolean;
@@ -286,6 +291,7 @@ function ComponentTile({
   isSelected,
   isLocked,
   isHidden,
+  conditionHidden,
   isMoving,
   isResizing,
   bindingMissing,
@@ -299,7 +305,7 @@ function ComponentTile({
   const setStateValues = useEditorStore((state) => state.setStateValues);
   return (
     <div
-      className={`component-tile ${isSelected ? "is-selected" : ""} ${isLocked ? "is-locked" : ""} ${isHidden ? "is-editor-hidden" : ""} ${isMoving ? "is-moving" : ""} ${isResizing ? "is-resizing" : ""} ${bindingMissing ? "has-missing" : ""}`}
+      className={`component-tile ${isSelected ? "is-selected" : ""} ${isLocked ? "is-locked" : ""} ${isHidden ? "is-editor-hidden" : ""} ${conditionHidden ? "is-condition-hidden" : ""} ${isMoving ? "is-moving" : ""} ${isResizing ? "is-resizing" : ""} ${bindingMissing ? "has-missing" : ""}`}
       style={{
         gridColumn: `${placement.x + 1} / span ${placement.w}`,
         gridRow: `${placement.y + 1} / span ${placement.h}`,
@@ -337,10 +343,11 @@ function ComponentTile({
           await dashboardClient.writeState(stateId, value);
         }}
       />
-      {isLocked || isHidden ? (
+      {isLocked || isHidden || conditionHidden ? (
         <div className="tile-state-badges" aria-hidden="true">
           {isLocked ? <Lock size={12} /> : null}
           {isHidden ? <EyeOff size={12} /> : null}
+          {conditionHidden ? <EyeOff size={12} /> : null}
         </div>
       ) : null}
       {isSelected && !isLocked ? (

@@ -99,6 +99,40 @@ button.dng-runtime-card:disabled {
   border-style: dashed;
 }
 
+.dng-runtime-card.has-conditional-accent {
+  border-color: var(--runtime-accent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--runtime-accent) 28%, transparent),
+      transparent
+    ),
+    var(--runtime-surface);
+}
+
+.dng-runtime-card.has-conditional-warning {
+  border-color: var(--runtime-warn);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--runtime-warn) 26%, transparent), transparent),
+    var(--runtime-surface);
+}
+
+.dng-runtime-card.has-conditional-danger {
+  border-color: var(--runtime-danger);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--runtime-danger) 26%, transparent),
+      transparent
+    ),
+    var(--runtime-surface);
+}
+
+.dng-runtime-card.has-conditional-muted {
+  opacity: 0.58;
+  filter: grayscale(0.55);
+}
+
 .dng-runtime-top {
   min-width: 0;
   display: flex;

@@ -1,17 +1,23 @@
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { StateOption } from "@dashboard-ng/shared";
 import { dashboardClient } from "../lib/client";
 
 interface StatePickerProps {
+  label?: string;
   value?: string | undefined;
   onSelect(stateId: string): void;
 }
 
-export function StatePicker({ value, onSelect }: StatePickerProps) {
+export function StatePicker({ label = "State", value, onSelect }: StatePickerProps) {
+  const inputId = useId();
   const [query, setQuery] = useState(value ?? "");
   const [states, setStates] = useState<StateOption[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setQuery(value ?? "");
+  }, [value]);
 
   useEffect(() => {
     let active = true;
@@ -35,13 +41,13 @@ export function StatePicker({ value, onSelect }: StatePickerProps) {
 
   return (
     <div className="state-picker">
-      <label className="field-label" htmlFor="state-picker-search">
-        State
+      <label className="field-label" htmlFor={inputId}>
+        {label}
       </label>
       <div className="search-field">
         <Search size={16} aria-hidden="true" />
         <input
-          id="state-picker-search"
+          id={inputId}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search states"

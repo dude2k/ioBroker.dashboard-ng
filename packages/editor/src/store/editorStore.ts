@@ -5,6 +5,8 @@ import {
   getCatalogEntry,
   type Binding,
   type BindingMode,
+  type ActionStep,
+  type ActionTrigger,
   type DashboardAction,
   type ComponentType,
   type DashboardBreakpoint,
@@ -13,8 +15,9 @@ import {
   type GridPlacement,
   type Page,
   type StatePrimitive,
+  type VisibilityRule,
 } from "@dashboard-ng/shared";
-import { clampGridPlacement } from "@dashboard-ng/runtime";
+import { clampGridPlacement, type ConditionalStyleRule } from "@dashboard-ng/runtime";
 import {
   clearEditorInteractionFlags,
   isEditorHidden,
@@ -29,6 +32,7 @@ import {
 } from "../lib/preview";
 
 export type PreviewSize = PreviewDevice;
+export type VisibilityOperator = "equals" | "notEquals" | "greaterThan" | "lessThan";
 
 interface ClipboardData {
   components: DashboardComponent[];
@@ -78,7 +82,34 @@ interface EditorState {
     placement: GridPlacement,
     breakpoint?: DashboardBreakpoint,
   ): void;
+  setComponentBinding(
+    componentId: string,
+    target: string,
+    stateId: string,
+    mode: BindingMode,
+  ): void;
+  setComponentFormulaBinding(
+    componentId: string,
+    target: string,
+    stateId: string | undefined,
+    formula: string,
+  ): void;
+  removeComponentBinding(componentId: string, target: string): void;
   setPrimaryBinding(componentId: string, stateId: string, mode: BindingMode): void;
+  addComponentAction(componentId: string, trigger: ActionTrigger): void;
+  updateComponentActionTrigger(actionId: string, trigger: ActionTrigger): void;
+  updateComponentActionStep(actionId: string, stepIndex: number, step: ActionStep): void;
+  addComponentActionStep(actionId: string): void;
+  removeComponentActionStep(actionId: string, stepIndex: number): void;
+  removeComponentAction(actionId: string): void;
+  setComponentVisibility(componentId: string, visibility: VisibilityRule): void;
+  setComponentVisibilityCondition(
+    componentId: string,
+    stateId: string,
+    operator: VisibilityOperator,
+    expected: StatePrimitive,
+  ): void;
+  setComponentConditionalStyle(componentId: string, rule: ConditionalStyleRule | undefined): void;
   deleteSelected(): void;
   copySelected(): void;
   pasteClipboard(): void;
@@ -411,7 +442,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     commit(set, state, nextProject, state.selectedIds, "Layout updated");
   },
 
-  setPrimaryBinding(componentId, stateId, mode) {
+  setComponentBinding(componentId, target, stateId, mode) {
     const state = get();
     const nextProject = cloneProject(state.project);
     const component = nextProject.components.find((item) => item.componentId === componentId);
@@ -420,35 +451,266 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     let binding = nextProject.bindings.find(
-      (item) => item.componentId === componentId && item.target === "value",
+      (item) => item.componentId === componentId && item.target === target,
     );
     if (!binding) {
       binding = {
         bindingId: createId("bind"),
         componentId,
-        target: "value",
+        target,
         kind: "state",
         mode,
         stateId,
         missing: false,
       };
       nextProject.bindings.push(binding);
-      component.bindingIds.push(binding.bindingId);
+      component.bindingIds = uniqueIds([...component.bindingIds, binding.bindingId]);
     } else {
+      binding.kind = "state";
       binding.mode = mode;
       binding.stateId = stateId;
       binding.missing = false;
+      delete binding.formula;
     }
 
-    if (component.type === "light-card") {
+    if (target === "value" && component.type === "light-card") {
       ensureToggleAction(nextProject, component, stateId);
     }
-    if (component.type === "scene-button") {
+    if (target === "value" && component.type === "scene-button") {
       ensureSetStateAction(nextProject, component, stateId);
     }
 
     nextProject.updatedAt = new Date().toISOString();
     commit(set, state, nextProject, state.selectedIds, "Binding updated");
+  },
+
+  setComponentFormulaBinding(componentId, target, stateId, formula) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const component = nextProject.components.find((item) => item.componentId === componentId);
+    if (!component) {
+      return;
+    }
+
+    let binding = nextProject.bindings.find(
+      (item) => item.componentId === componentId && item.target === target,
+    );
+    if (!binding) {
+      binding = {
+        bindingId: createId("bind"),
+        componentId,
+        target,
+        kind: "formula",
+        mode: "read",
+        formula,
+        missing: false,
+      };
+      if (stateId) {
+        binding.stateId = stateId;
+      }
+      nextProject.bindings.push(binding);
+      component.bindingIds = uniqueIds([...component.bindingIds, binding.bindingId]);
+    } else {
+      binding.kind = "formula";
+      binding.mode = "read";
+      binding.formula = formula;
+      binding.missing = false;
+      if (stateId) {
+        binding.stateId = stateId;
+      } else {
+        delete binding.stateId;
+      }
+    }
+
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Formula binding updated");
+  },
+
+  removeComponentBinding(componentId, target) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const component = nextProject.components.find((item) => item.componentId === componentId);
+    if (!component) {
+      return;
+    }
+    const binding = nextProject.bindings.find(
+      (item) => item.componentId === componentId && item.target === target,
+    );
+    if (!binding) {
+      return;
+    }
+
+    nextProject.bindings = nextProject.bindings.filter(
+      (item) => item.bindingId !== binding.bindingId,
+    );
+    component.bindingIds = component.bindingIds.filter(
+      (bindingId) => bindingId !== binding.bindingId,
+    );
+    removeGeneratedActionsForState(nextProject, component, binding.stateId);
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Binding removed");
+  },
+
+  setPrimaryBinding(componentId, stateId, mode) {
+    get().setComponentBinding(componentId, "value", stateId, mode);
+  },
+
+  addComponentAction(componentId, trigger) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const component = nextProject.components.find((item) => item.componentId === componentId);
+    if (!component) {
+      return;
+    }
+
+    const existing = nextProject.actions.find(
+      (action) => action.componentId === componentId && action.trigger === trigger,
+    );
+    if (existing) {
+      existing.steps.push(defaultActionStep(nextProject));
+      nextProject.updatedAt = new Date().toISOString();
+      commit(set, state, nextProject, state.selectedIds, "Action step added");
+      return;
+    }
+
+    const action: DashboardAction = {
+      actionId: createId("act"),
+      componentId,
+      trigger,
+      steps: [defaultActionStep(nextProject)],
+    };
+    nextProject.actions.push(action);
+    component.actionIds = uniqueIds([...component.actionIds, action.actionId]);
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Action added");
+  },
+
+  updateComponentActionTrigger(actionId, trigger) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const action = nextProject.actions.find((item) => item.actionId === actionId);
+    if (!action || action.trigger === trigger) {
+      return;
+    }
+    action.trigger = trigger;
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Action updated");
+  },
+
+  updateComponentActionStep(actionId, stepIndex, step) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const action = nextProject.actions.find((item) => item.actionId === actionId);
+    if (!action || !action.steps[stepIndex]) {
+      return;
+    }
+    action.steps[stepIndex] = step;
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Action updated");
+  },
+
+  addComponentActionStep(actionId) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const action = nextProject.actions.find((item) => item.actionId === actionId);
+    if (!action) {
+      return;
+    }
+    action.steps.push(defaultActionStep(nextProject));
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Action step added");
+  },
+
+  removeComponentActionStep(actionId, stepIndex) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const action = nextProject.actions.find((item) => item.actionId === actionId);
+    if (!action || !action.steps[stepIndex]) {
+      return;
+    }
+    action.steps.splice(stepIndex, 1);
+    if (!action.steps.length) {
+      action.steps.push(defaultActionStep(nextProject));
+    }
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Action step removed");
+  },
+
+  removeComponentAction(actionId) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const action = nextProject.actions.find((item) => item.actionId === actionId);
+    if (!action) {
+      return;
+    }
+    const component = nextProject.components.find(
+      (item) => item.componentId === action.componentId,
+    );
+    nextProject.actions = nextProject.actions.filter((item) => item.actionId !== actionId);
+    if (component) {
+      component.actionIds = component.actionIds.filter((item) => item !== actionId);
+    }
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Action removed");
+  },
+
+  setComponentVisibility(componentId, visibility) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const component = nextProject.components.find((item) => item.componentId === componentId);
+    if (!component) {
+      return;
+    }
+    if (visibility.kind === "always" || visibility.kind === "formula") {
+      removeVisibilityBinding(nextProject, component);
+    }
+    component.visibility = visibility;
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Visibility updated");
+  },
+
+  setComponentVisibilityCondition(componentId, stateId, operator, expected) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const component = nextProject.components.find((item) => item.componentId === componentId);
+    if (!component) {
+      return;
+    }
+    const binding = ensureVisibilityBinding(nextProject, component, stateId);
+    component.visibility =
+      operator === "equals"
+        ? { kind: "binding", bindingId: binding.bindingId, expected }
+        : {
+            kind: "formula",
+            bindingId: binding.bindingId,
+            formula: visibilityFormulaForOperator(operator),
+            expected,
+          };
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Visibility updated");
+  },
+
+  setComponentConditionalStyle(componentId, rule) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const component = nextProject.components.find((item) => item.componentId === componentId);
+    if (!component) {
+      return;
+    }
+    if (!rule?.enabled) {
+      removeStyleBinding(nextProject, component);
+      const { conditional: _conditional, ...restStyle } = component.style;
+      component.style = restStyle;
+    } else {
+      if (rule.operator !== "formula" && rule.stateId) {
+        ensureStyleBinding(nextProject, component, rule.stateId);
+      } else {
+        removeStyleBinding(nextProject, component);
+      }
+      component.style = { ...component.style, conditional: rule };
+    }
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Conditional style updated");
   },
 
   deleteSelected() {
@@ -712,9 +974,13 @@ export function getActivePage(project: DashboardProject) {
   );
 }
 
-export function getComponentBinding(project: DashboardProject, component: DashboardComponent) {
+export function getComponentBinding(
+  project: DashboardProject,
+  component: DashboardComponent,
+  target = "value",
+) {
   return project.bindings.find(
-    (binding) => binding.componentId === component.componentId && binding.target === "value",
+    (binding) => binding.componentId === component.componentId && binding.target === target,
   );
 }
 
@@ -838,7 +1104,7 @@ function ensureToggleAction(
       steps: [],
     };
     project.actions.push(action);
-    component.actionIds.push(action.actionId);
+    component.actionIds = uniqueIds([...component.actionIds, action.actionId]);
   }
   action.steps = [{ kind: "toggleState", stateId }];
 }
@@ -859,9 +1125,160 @@ function ensureSetStateAction(
       steps: [],
     };
     project.actions.push(action);
-    component.actionIds.push(action.actionId);
+    component.actionIds = uniqueIds([...component.actionIds, action.actionId]);
   }
   action.steps = [{ kind: "setState", stateId, value: true }];
+}
+
+function defaultActionStep(project: DashboardProject): ActionStep {
+  const pageId = project.pages[0]?.pageId;
+  if (pageId) {
+    return { kind: "navigate", pageId };
+  }
+  return { kind: "openUrl", url: "", newWindow: false };
+}
+
+function removeGeneratedActionsForState(
+  project: DashboardProject,
+  component: DashboardComponent,
+  stateId: string | undefined,
+): void {
+  if (!stateId) {
+    return;
+  }
+  const removeActionIds = new Set(
+    project.actions
+      .filter(
+        (action) =>
+          action.componentId === component.componentId &&
+          action.trigger === "tap" &&
+          action.steps.length === 1 &&
+          actionStepTargetsState(action.steps[0], stateId),
+      )
+      .map((action) => action.actionId),
+  );
+  if (!removeActionIds.size) {
+    return;
+  }
+  project.actions = project.actions.filter((action) => !removeActionIds.has(action.actionId));
+  component.actionIds = component.actionIds.filter((actionId) => !removeActionIds.has(actionId));
+}
+
+function ensureVisibilityBinding(
+  project: DashboardProject,
+  component: DashboardComponent,
+  stateId: string,
+): Binding {
+  let binding = project.bindings.find(
+    (candidate) =>
+      candidate.componentId === component.componentId && candidate.target === "visibility",
+  );
+  if (!binding) {
+    binding = {
+      bindingId: createId("bind"),
+      componentId: component.componentId,
+      target: "visibility",
+      kind: "state",
+      mode: "read",
+      stateId,
+      missing: false,
+    };
+    project.bindings.push(binding);
+    component.bindingIds = uniqueIds([...component.bindingIds, binding.bindingId]);
+  } else {
+    binding.kind = "state";
+    binding.mode = "read";
+    binding.stateId = stateId;
+    binding.missing = false;
+  }
+  return binding;
+}
+
+function removeVisibilityBinding(project: DashboardProject, component: DashboardComponent): void {
+  const binding = project.bindings.find(
+    (candidate) =>
+      candidate.componentId === component.componentId && candidate.target === "visibility",
+  );
+  if (!binding) {
+    return;
+  }
+  project.bindings = project.bindings.filter(
+    (candidate) => candidate.bindingId !== binding.bindingId,
+  );
+  component.bindingIds = component.bindingIds.filter(
+    (bindingId) => bindingId !== binding.bindingId,
+  );
+}
+
+function ensureStyleBinding(
+  project: DashboardProject,
+  component: DashboardComponent,
+  stateId: string,
+): Binding {
+  let binding = project.bindings.find(
+    (candidate) => candidate.componentId === component.componentId && candidate.target === "style",
+  );
+  if (!binding) {
+    binding = {
+      bindingId: createId("bind"),
+      componentId: component.componentId,
+      target: "style",
+      kind: "state",
+      mode: "read",
+      stateId,
+      missing: false,
+    };
+    project.bindings.push(binding);
+    component.bindingIds = uniqueIds([...component.bindingIds, binding.bindingId]);
+  } else {
+    binding.kind = "state";
+    binding.mode = "read";
+    binding.stateId = stateId;
+    binding.missing = false;
+  }
+  return binding;
+}
+
+function removeStyleBinding(project: DashboardProject, component: DashboardComponent): void {
+  const binding = project.bindings.find(
+    (candidate) => candidate.componentId === component.componentId && candidate.target === "style",
+  );
+  if (!binding) {
+    return;
+  }
+  project.bindings = project.bindings.filter(
+    (candidate) => candidate.bindingId !== binding.bindingId,
+  );
+  component.bindingIds = component.bindingIds.filter(
+    (bindingId) => bindingId !== binding.bindingId,
+  );
+}
+
+function visibilityFormulaForOperator(operator: VisibilityOperator): string {
+  switch (operator) {
+    case "notEquals":
+      return "value != expected";
+    case "greaterThan":
+      return "value > expected";
+    case "lessThan":
+      return "value < expected";
+    case "equals":
+      return "value == expected";
+  }
+}
+
+function actionStepTargetsState(step: ActionSteps[number] | undefined, stateId: string): boolean {
+  if (!step) {
+    return false;
+  }
+  return (
+    (step.kind === "setState" || step.kind === "toggleState" || step.kind === "runScene") &&
+    step.stateId === stateId
+  );
+}
+
+function uniqueIds(ids: string[]): string[] {
+  return [...new Set(ids)];
 }
 
 function nextComponentY(project: DashboardProject, pageId: string): number {

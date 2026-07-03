@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.3.16",
+    "version": "0.4.0",
     "news": {
+      "0.4.0": {
+        "en": "Added the AP4 inspector block with target bindings, actions, visibility, conditional styles and prepared formula bindings.",
+        "de": "AP4-Inspector-Block mit Ziel-Bindings, Aktionen, Sichtbarkeit, bedingten Styles und vorbereiteten Formel-Bindings ergaenzt.",
+        "ru": "Dobavlen blok inspektora AP4 s target bindings, actions, visibility, conditional styles i podgotovlennymi formula bindings.",
+        "pt": "Adicionado o bloco de inspetor AP4 com bindings de alvo, acoes, visibilidade, estilos condicionais e bindings de formula preparados.",
+        "nl": "AP4-inspectorblok toegevoegd met doelbindings, acties, zichtbaarheid, conditionele stijlen en voorbereide formulebindings.",
+        "fr": "Bloc inspecteur AP4 ajoute avec bindings cibles, actions, visibilite, styles conditionnels et bindings de formule prepares.",
+        "it": "Aggiunto il blocco inspector AP4 con binding target, azioni, visibilita, stili condizionali e binding formula preparati.",
+        "es": "Agregado el bloque inspector AP4 con bindings de destino, acciones, visibilidad, estilos condicionales y bindings de formula preparados.",
+        "pl": "Dodano blok inspektora AP4 z bindingami celu, akcjami, widocznoscia, stylami warunkowymi i przygotowanymi bindingami formul.",
+        "uk": "Dodano blok inspektora AP4 z target bindings, actions, visibility, conditional styles i pidhotovlenymy formula bindings.",
+        "zh-cn": "Added the AP4 inspector block with target bindings, actions, visibility, conditional styles and prepared formula bindings."
+      },
       "0.3.16": {
         "en": "Left-aligned the Viewer grid so dashboards start at the page edge instead of being horizontally centered.",
         "de": "Viewer-Grid linksbuendig ausgerichtet, damit Dashboards am Seitenrand starten statt horizontal zentriert zu sein.",
@@ -249,19 +262,6 @@
         "pl": "Poprawiono link web Viewera, aby ioBroker web otwieral przestrzen plikow dashboard-ng.",
         "uk": "Vypravleno web-posylannya Viewer dlya vidkryttya file namespace dashboard-ng v ioBroker web.",
         "zh-cn": "Viewer web link corrected to open the dashboard-ng file namespace in ioBroker web."
-      },
-      "0.2.0": {
-        "en": "Shared component runtime for Editor and Viewer plus full MVP card renderers.",
-        "de": "Gemeinsame Komponenten-Runtime fuer Editor und Viewer plus alle MVP-Karten-Renderer.",
-        "ru": "Общая среда выполнения компонентов для редактора и просмотрщика, плюс все рендереры MVP-карт.",
-        "pt": "Runtime de componentes compartilhado para Editor e Viewer, alem de todos os renderizadores de cartoes MVP.",
-        "nl": "Gedeelde componentruntime voor Editor en Viewer plus alle MVP-kaart-renderers.",
-        "fr": "Runtime de composants partage pour l'editeur et la visionneuse, avec tous les rendus de cartes MVP.",
-        "it": "Runtime componenti condiviso per Editor e Viewer con tutti i renderer delle schede MVP.",
-        "es": "Runtime de componentes compartido para Editor y Viewer con todos los renderizadores de tarjetas MVP.",
-        "pl": "Wspolne srodowisko komponentow dla edytora i widoku oraz wszystkie renderery kart MVP.",
-        "uk": "Спільне середовище виконання компонентів для редактора і переглядача, плюс усі рендерери MVP-карт.",
-        "zh-cn": "编辑器和查看器共享组件运行时，并包含全部 MVP 卡片渲染器。"
       }
     },
     "titleLang": {

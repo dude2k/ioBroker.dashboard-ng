@@ -1,13 +1,56 @@
-import { CopyPlus, Eye, EyeOff, Lock, Trash2 } from "lucide-react";
+import { CopyPlus, Eye, EyeOff, Lock, Plus, Trash2 } from "lucide-react";
+import type { ChangeEvent } from "react";
+import {
+  evaluateFormula,
+  type FormulaContext,
+  type ActionStep,
+  type ActionTrigger,
+  type Binding,
+  type BindingMode,
+  type Page,
+  type StatePrimitive,
+  type VisibilityRule,
+} from "@dashboard-ng/shared";
+import {
+  getConditionalStyleRule,
+  type ConditionalStyleOperator,
+  type ConditionalStyleRule,
+  type ConditionalStyleTone,
+} from "@dashboard-ng/runtime";
 import { isEditorHidden } from "../lib/componentEditorState";
-import { getComponentBinding, useEditorStore } from "../store/editorStore";
+import { getComponentBinding, useEditorStore, type VisibilityOperator } from "../store/editorStore";
+import { getBindingTargets, type InspectorBindingTarget } from "./bindingFields";
+import {
+  formatInspectorValue,
+  getInspectorFields,
+  parseInspectorValue,
+  type InspectorField,
+} from "./inspectorFields";
 import { StatePicker } from "./StatePicker";
 
 export function Inspector() {
   const project = useEditorStore((state) => state.project);
+  const stateValues = useEditorStore((state) => state.stateValues);
   const selectedIds = useEditorStore((state) => state.selectedIds);
   const updateComponentProps = useEditorStore((state) => state.updateComponentProps);
-  const setPrimaryBinding = useEditorStore((state) => state.setPrimaryBinding);
+  const setComponentBinding = useEditorStore((state) => state.setComponentBinding);
+  const setComponentFormulaBinding = useEditorStore((state) => state.setComponentFormulaBinding);
+  const removeComponentBinding = useEditorStore((state) => state.removeComponentBinding);
+  const addComponentAction = useEditorStore((state) => state.addComponentAction);
+  const updateComponentActionTrigger = useEditorStore(
+    (state) => state.updateComponentActionTrigger,
+  );
+  const updateComponentActionStep = useEditorStore((state) => state.updateComponentActionStep);
+  const addComponentActionStep = useEditorStore((state) => state.addComponentActionStep);
+  const removeComponentActionStep = useEditorStore((state) => state.removeComponentActionStep);
+  const removeComponentAction = useEditorStore((state) => state.removeComponentAction);
+  const setComponentVisibility = useEditorStore((state) => state.setComponentVisibility);
+  const setComponentVisibilityCondition = useEditorStore(
+    (state) => state.setComponentVisibilityCondition,
+  );
+  const setComponentConditionalStyle = useEditorStore(
+    (state) => state.setComponentConditionalStyle,
+  );
   const duplicateSelected = useEditorStore((state) => state.duplicateSelected);
   const toggleSelectedLock = useEditorStore((state) => state.toggleSelectedLock);
   const toggleSelectedHidden = useEditorStore((state) => state.toggleSelectedHidden);
@@ -61,51 +104,171 @@ export function Inspector() {
     );
   }
 
-  const binding = getComponentBinding(project, component);
-  const bindingMode = component.type === "sensor-card" ? "read" : "readwrite";
+  const bindingTargets = getBindingTargets(component.type);
+  const componentActions = project.actions.filter(
+    (action) => action.componentId === component.componentId,
+  );
 
   return (
     <aside className="inspector" aria-label="Inspector">
       <div className="panel-title">Inspector</div>
       <div className="inspector-stack">
-        <label className="field">
-          <span className="field-label">Title</span>
-          <input
-            value={String(component.props.title ?? component.name)}
-            onChange={(event) =>
-              updateComponentProps(component.componentId, { title: event.target.value })
+        <div className="inspector-meta">
+          <span>{component.type}</span>
+          <code>{component.componentId}</code>
+        </div>
+
+        {getInspectorFields(component.type).map((field) => (
+          <InspectorFieldControl
+            key={field.prop}
+            field={field}
+            value={
+              field.prop === "title"
+                ? (component.props.title ?? component.name)
+                : component.props[field.prop]
+            }
+            onChange={(value) =>
+              updateComponentProps(component.componentId, {
+                [field.prop]: value,
+              })
             }
           />
-        </label>
+        ))}
 
-        {component.type === "sensor-card" ? (
-          <label className="field">
-            <span className="field-label">Unit</span>
-            <input
-              value={String(component.props.unit ?? "")}
-              onChange={(event) =>
-                updateComponentProps(component.componentId, { unit: event.target.value })
-              }
-            />
-          </label>
+        {bindingTargets.length ? (
+          <div className="binding-section">
+            <div className="section-title">Bindings</div>
+            {bindingTargets.map((target) => {
+              const binding = getComponentBinding(project, component, target.target);
+              return (
+                <BindingTargetControl
+                  key={target.target}
+                  target={target}
+                  binding={binding}
+                  stateValues={stateValues}
+                  onSelectState={(stateId, mode) =>
+                    setComponentBinding(component.componentId, target.target, stateId, mode)
+                  }
+                  onSetFormula={(stateId, formula) =>
+                    setComponentFormulaBinding(
+                      component.componentId,
+                      target.target,
+                      stateId,
+                      formula,
+                    )
+                  }
+                  onChangeMode={(mode) => {
+                    if (binding?.stateId) {
+                      setComponentBinding(
+                        component.componentId,
+                        target.target,
+                        binding.stateId,
+                        mode,
+                      );
+                    }
+                  }}
+                  onRemove={() => removeComponentBinding(component.componentId, target.target)}
+                />
+              );
+            })}
+          </div>
         ) : null}
 
-        {component.type === "light-card" ? (
-          <label className="field">
-            <span className="field-label">Subtitle</span>
-            <input
-              value={String(component.props.subtitle ?? "")}
-              onChange={(event) =>
-                updateComponentProps(component.componentId, { subtitle: event.target.value })
-              }
-            />
-          </label>
-        ) : null}
-
-        <StatePicker
-          value={binding?.stateId}
-          onSelect={(stateId) => setPrimaryBinding(component.componentId, stateId, bindingMode)}
+        <VisibilityControl
+          binding={getComponentBinding(project, component, "visibility")}
+          visibility={component.visibility}
+          onSetAlways={() => setComponentVisibility(component.componentId, { kind: "always" })}
+          onSetCondition={(stateId, operator, expected) =>
+            setComponentVisibilityCondition(component.componentId, stateId, operator, expected)
+          }
+          onSetFormula={(formula) =>
+            setComponentVisibility(component.componentId, { kind: "formula", formula })
+          }
         />
+
+        <ConditionalStyleControl
+          binding={getComponentBinding(project, component, "style")}
+          rule={getConditionalStyleRule(component)}
+          onChange={(rule) => setComponentConditionalStyle(component.componentId, rule)}
+        />
+
+        <div className="action-section">
+          <div className="section-title">Actions</div>
+          <div className="action-toolbar">
+            <button type="button" onClick={() => addComponentAction(component.componentId, "tap")}>
+              <Plus size={14} aria-hidden="true" />
+              <span>Tap</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => addComponentAction(component.componentId, "longPress")}
+            >
+              <Plus size={14} aria-hidden="true" />
+              <span>Long</span>
+            </button>
+          </div>
+          {componentActions.length ? (
+            componentActions.map((action) => (
+              <div className="action-card" key={action.actionId}>
+                <div className="binding-header">
+                  <div>
+                    <strong>{triggerLabel(action.trigger)}</strong>
+                    <span>
+                      {action.steps.length} step{action.steps.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    title="Remove action"
+                    onClick={() => removeComponentAction(action.actionId)}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                </div>
+
+                <label className="field">
+                  <span className="field-label">Trigger</span>
+                  <select
+                    value={action.trigger}
+                    onChange={(event) =>
+                      updateComponentActionTrigger(
+                        action.actionId,
+                        event.target.value as ActionTrigger,
+                      )
+                    }
+                  >
+                    <option value="tap">Tap</option>
+                    <option value="longPress">Long press</option>
+                  </select>
+                </label>
+
+                {action.steps.map((step, stepIndex) => (
+                  <ActionStepControl
+                    key={`${action.actionId}-${stepIndex}`}
+                    pages={project.pages}
+                    step={step}
+                    stepIndex={stepIndex}
+                    onChange={(nextStep) =>
+                      updateComponentActionStep(action.actionId, stepIndex, nextStep)
+                    }
+                    onRemove={() => removeComponentActionStep(action.actionId, stepIndex)}
+                  />
+                ))}
+
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => addComponentActionStep(action.actionId)}
+                >
+                  <Plus size={14} aria-hidden="true" />
+                  <span>Add step</span>
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="binding-hint">No actions configured</div>
+          )}
+        </div>
 
         <button
           className="danger-button"
@@ -117,5 +280,562 @@ export function Inspector() {
         </button>
       </div>
     </aside>
+  );
+}
+
+function BindingTargetControl({
+  target,
+  binding,
+  stateValues,
+  onSelectState,
+  onSetFormula,
+  onChangeMode,
+  onRemove,
+}: {
+  target: InspectorBindingTarget;
+  binding: Binding | undefined;
+  stateValues: Record<string, StatePrimitive>;
+  onSelectState(stateId: string, mode: BindingMode): void;
+  onSetFormula(stateId: string | undefined, formula: string): void;
+  onChangeMode(mode: BindingMode): void;
+  onRemove(): void;
+}) {
+  const source = binding?.kind === "formula" ? "formula" : "state";
+  const selectedMode = binding?.mode ?? target.defaultMode;
+  const modes = target.modes.includes(selectedMode)
+    ? target.modes
+    : [selectedMode, ...target.modes];
+  const formula = binding?.formula ?? "value";
+  const formulaValidation = validateInspectorFormula(formula, binding?.stateId, stateValues);
+
+  return (
+    <div className={binding?.missing ? "binding-card is-missing" : "binding-card"}>
+      <div className="binding-header">
+        <div>
+          <strong>{target.label}</strong>
+          <span>{target.description}</span>
+        </div>
+        <code>{target.target}</code>
+      </div>
+
+      <label className="field">
+        <span className="field-label">Source</span>
+        <select
+          value={source}
+          onChange={(event) => {
+            if (event.target.value === "formula") {
+              onSetFormula(binding?.stateId, formula);
+              return;
+            }
+            if (binding?.stateId) {
+              onSelectState(binding.stateId, target.defaultMode);
+            }
+          }}
+        >
+          <option value="state">State</option>
+          <option value="formula">Formula</option>
+        </select>
+      </label>
+
+      <label className="field">
+        <span className="field-label">Mode</span>
+        <select
+          disabled={!binding?.stateId || source === "formula"}
+          value={selectedMode}
+          onChange={(event) => onChangeMode(event.target.value as BindingMode)}
+        >
+          {modes.map((mode) => (
+            <option key={mode} value={mode}>
+              {modeLabel(mode)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <StatePicker
+        label={source === "formula" ? "Input state" : "State"}
+        value={binding?.stateId}
+        onSelect={(stateId) =>
+          source === "formula"
+            ? onSetFormula(stateId, formula)
+            : onSelectState(stateId, selectedMode)
+        }
+      />
+
+      {source === "formula" ? (
+        <label className="field">
+          <span className="field-label">Formula</span>
+          <input
+            value={formula}
+            onChange={(event) => onSetFormula(binding?.stateId, event.target.value)}
+            placeholder="value / 1000"
+          />
+          <span className={formulaValidation.valid ? "formula-status" : "formula-status has-error"}>
+            {formulaValidation.message}
+          </span>
+        </label>
+      ) : null}
+
+      {binding ? (
+        <div className="binding-footer">
+          <span>{binding.missing ? "Missing state" : binding.stateId}</span>
+          <button type="button" title="Remove binding" onClick={onRemove}>
+            <Trash2 size={14} aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        <div className="binding-hint">No state selected</div>
+      )}
+    </div>
+  );
+}
+
+type VisibilityMode = "always" | VisibilityOperator | "formula";
+
+function VisibilityControl({
+  binding,
+  visibility,
+  onSetAlways,
+  onSetCondition,
+  onSetFormula,
+}: {
+  binding: Binding | undefined;
+  visibility: VisibilityRule | undefined;
+  onSetAlways(): void;
+  onSetCondition(stateId: string, operator: VisibilityOperator, expected: StatePrimitive): void;
+  onSetFormula(formula: string): void;
+}) {
+  const mode = visibilityMode(visibility);
+  const expected = visibility?.expected ?? true;
+  const formula = visibility?.kind === "formula" ? (visibility.formula ?? "") : "";
+
+  return (
+    <div className="visibility-section">
+      <div className="section-title">Visibility</div>
+      <div className="binding-card">
+        <label className="field">
+          <span className="field-label">Mode</span>
+          <select
+            value={mode}
+            onChange={(event) => {
+              const nextMode = event.target.value as VisibilityMode;
+              if (nextMode === "always") {
+                onSetAlways();
+                return;
+              }
+              if (nextMode === "formula") {
+                onSetFormula(formula || "true");
+                return;
+              }
+              if (binding?.stateId) {
+                onSetCondition(binding.stateId, nextMode, expected);
+              }
+            }}
+          >
+            <option value="always">Always visible</option>
+            <option value="equals">State equals</option>
+            <option value="notEquals">State not equals</option>
+            <option value="greaterThan">State greater than</option>
+            <option value="lessThan">State less than</option>
+            <option value="formula">Formula true</option>
+          </select>
+        </label>
+
+        {mode === "formula" ? (
+          <label className="field">
+            <span className="field-label">Formula</span>
+            <input
+              value={formula}
+              onChange={(event) => onSetFormula(event.target.value)}
+              placeholder="value == true"
+            />
+          </label>
+        ) : null}
+
+        {mode !== "always" && mode !== "formula" ? (
+          <>
+            <StatePicker
+              label="State"
+              value={binding?.stateId}
+              onSelect={(stateId) => onSetCondition(stateId, mode, expected)}
+            />
+            <label className="field">
+              <span className="field-label">Expected</span>
+              <input
+                value={formatActionValue(expected)}
+                onChange={(event) =>
+                  binding?.stateId
+                    ? onSetCondition(binding.stateId, mode, parseActionValue(event.target.value))
+                    : undefined
+                }
+                placeholder="true, 1, text"
+              />
+            </label>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function visibilityMode(visibility: VisibilityRule | undefined): VisibilityMode {
+  if (!visibility || visibility.kind === "always") {
+    return "always";
+  }
+  if (visibility.kind === "binding") {
+    return "equals";
+  }
+  switch (visibility.formula) {
+    case "value != expected":
+      return "notEquals";
+    case "value > expected":
+      return "greaterThan";
+    case "value < expected":
+      return "lessThan";
+    default:
+      return "formula";
+  }
+}
+
+function ConditionalStyleControl({
+  binding,
+  rule,
+  onChange,
+}: {
+  binding: Binding | undefined;
+  rule: ConditionalStyleRule | undefined;
+  onChange(rule: ConditionalStyleRule | undefined): void;
+}) {
+  const current: ConditionalStyleRule = rule ?? {
+    enabled: false,
+    tone: "accent",
+    operator: "equals",
+    expected: true,
+  };
+  const stateId = current.stateId ?? binding?.stateId;
+
+  const update = (patch: Partial<ConditionalStyleRule>) =>
+    onChange({ ...current, ...patch, enabled: patch.enabled ?? current.enabled });
+
+  return (
+    <div className="conditional-style-section">
+      <div className="section-title">Conditional style</div>
+      <div className="binding-card">
+        <label className="field checkbox-field">
+          <input
+            type="checkbox"
+            checked={current.enabled}
+            onChange={(event) =>
+              event.target.checked ? update({ enabled: true }) : onChange(undefined)
+            }
+          />
+          <span className="field-label">Enable style rule</span>
+        </label>
+
+        {current.enabled ? (
+          <>
+            <label className="field">
+              <span className="field-label">Tone</span>
+              <select
+                value={current.tone}
+                onChange={(event) => update({ tone: event.target.value as ConditionalStyleTone })}
+              >
+                <option value="accent">Accent</option>
+                <option value="warning">Warning</option>
+                <option value="danger">Danger</option>
+                <option value="muted">Muted</option>
+              </select>
+            </label>
+
+            <label className="field">
+              <span className="field-label">Condition</span>
+              <select
+                value={current.operator}
+                onChange={(event) =>
+                  update({ operator: event.target.value as ConditionalStyleOperator })
+                }
+              >
+                <option value="equals">State equals</option>
+                <option value="notEquals">State not equals</option>
+                <option value="greaterThan">State greater than</option>
+                <option value="lessThan">State less than</option>
+                <option value="formula">Formula true</option>
+              </select>
+            </label>
+
+            {current.operator === "formula" ? (
+              <label className="field">
+                <span className="field-label">Formula</span>
+                <input
+                  value={current.formula ?? ""}
+                  onChange={(event) => update({ formula: event.target.value })}
+                  placeholder="value == true"
+                />
+              </label>
+            ) : (
+              <>
+                <StatePicker
+                  label="State"
+                  value={stateId}
+                  onSelect={(nextStateId) => update({ stateId: nextStateId })}
+                />
+                <label className="field">
+                  <span className="field-label">Expected</span>
+                  <input
+                    value={formatActionValue(current.expected)}
+                    onChange={(event) => update({ expected: parseActionValue(event.target.value) })}
+                    placeholder="true, 1, text"
+                  />
+                </label>
+              </>
+            )}
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function modeLabel(mode: BindingMode): string {
+  switch (mode) {
+    case "read":
+      return "Read";
+    case "write":
+      return "Write";
+    case "readwrite":
+      return "Read/write";
+  }
+}
+
+function validateInspectorFormula(
+  formula: string,
+  stateId: string | undefined,
+  stateValues: Record<string, StatePrimitive>,
+): { valid: boolean; message: string } {
+  if (!formula.trim()) {
+    return { valid: false, message: "Formula is required" };
+  }
+  try {
+    const context: FormulaContext = {};
+    if (stateId) {
+      context.value = stateValues[stateId] ?? 1;
+    }
+    Object.entries(stateValues).forEach(([id, value]) => {
+      context[id] = value;
+    });
+    const result = evaluateFormula(formula, context);
+    return { valid: true, message: `OK -> ${String(result)}` };
+  } catch (error) {
+    return {
+      valid: false,
+      message: error instanceof Error ? error.message : "Formula is invalid",
+    };
+  }
+}
+
+function ActionStepControl({
+  pages,
+  step,
+  stepIndex,
+  onChange,
+  onRemove,
+}: {
+  pages: Page[];
+  step: ActionStep;
+  stepIndex: number;
+  onChange(step: ActionStep): void;
+  onRemove(): void;
+}) {
+  return (
+    <div className="action-step">
+      <div className="binding-header">
+        <strong>Step {stepIndex + 1}</strong>
+        <button type="button" title="Remove step" onClick={onRemove}>
+          <Trash2 size={14} aria-hidden="true" />
+        </button>
+      </div>
+
+      <label className="field">
+        <span className="field-label">Type</span>
+        <select
+          value={step.kind}
+          onChange={(event) => onChange(createActionStep(event.target.value, pages, step))}
+        >
+          <option value="setState">Set state</option>
+          <option value="toggleState">Toggle state</option>
+          <option value="runScene">Run scene</option>
+          <option value="navigate">Navigate page</option>
+          <option value="openUrl">Open URL</option>
+        </select>
+      </label>
+
+      {step.kind === "navigate" ? (
+        <label className="field">
+          <span className="field-label">Page</span>
+          <select
+            value={step.pageId}
+            onChange={(event) => onChange({ ...step, pageId: event.target.value })}
+          >
+            {pages.map((page) => (
+              <option key={page.pageId} value={page.pageId}>
+                {page.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      {step.kind === "openUrl" ? (
+        <>
+          <label className="field">
+            <span className="field-label">URL</span>
+            <input
+              type="url"
+              value={step.url}
+              onChange={(event) => onChange({ ...step, url: event.target.value })}
+              placeholder="https://..."
+            />
+          </label>
+          <label className="field checkbox-field">
+            <input
+              type="checkbox"
+              checked={step.newWindow}
+              onChange={(event) => onChange({ ...step, newWindow: event.target.checked })}
+            />
+            <span className="field-label">New window</span>
+          </label>
+        </>
+      ) : null}
+
+      {hasActionState(step) ? (
+        <StatePicker
+          label="State"
+          value={step.stateId}
+          onSelect={(stateId) => onChange({ ...step, stateId } as ActionStep)}
+        />
+      ) : null}
+
+      {step.kind === "setState" || step.kind === "runScene" ? (
+        <label className="field">
+          <span className="field-label">Value</span>
+          <input
+            value={formatActionValue(step.value)}
+            onChange={(event) =>
+              onChange({ ...step, value: parseActionValue(event.target.value) } as ActionStep)
+            }
+            placeholder="true, 1, text"
+          />
+        </label>
+      ) : null}
+    </div>
+  );
+}
+
+function createActionStep(kind: string, pages: Page[], previous: ActionStep): ActionStep {
+  const stateId = hasActionState(previous) ? previous.stateId : "";
+  const value = hasActionValue(previous) && previous.value !== undefined ? previous.value : true;
+  switch (kind) {
+    case "setState":
+      return { kind: "setState", stateId, value };
+    case "toggleState":
+      return { kind: "toggleState", stateId };
+    case "runScene":
+      return { kind: "runScene", stateId, value };
+    case "navigate":
+      return { kind: "navigate", pageId: pages[0]?.pageId ?? "" };
+    case "openUrl":
+      return { kind: "openUrl", url: "", newWindow: false };
+    default:
+      return previous;
+  }
+}
+
+function hasActionState(step: ActionStep): step is Extract<ActionStep, { stateId: string }> {
+  return "stateId" in step;
+}
+
+function hasActionValue(step: ActionStep): step is Extract<ActionStep, { value?: StatePrimitive }> {
+  return "value" in step;
+}
+
+function formatActionValue(value: StatePrimitive | undefined): string {
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "";
+  }
+  return String(value);
+}
+
+function parseActionValue(value: string): StatePrimitive {
+  const trimmed = value.trim();
+  if (trimmed === "true") {
+    return true;
+  }
+  if (trimmed === "false") {
+    return false;
+  }
+  if (trimmed === "null") {
+    return null;
+  }
+  if (trimmed !== "" && Number.isFinite(Number(trimmed))) {
+    return Number(trimmed);
+  }
+  return value;
+}
+
+function triggerLabel(trigger: ActionTrigger): string {
+  switch (trigger) {
+    case "tap":
+      return "Tap";
+    case "longPress":
+      return "Long press";
+    case "swipe":
+      return "Swipe";
+  }
+}
+
+function InspectorFieldControl({
+  field,
+  value,
+  onChange,
+}: {
+  field: InspectorField;
+  value: unknown;
+  onChange(value: unknown): void;
+}) {
+  if (field.kind === "boolean") {
+    return (
+      <label className="field checkbox-field">
+        <input
+          type="checkbox"
+          checked={Boolean(value)}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        <span className="field-label">{field.label}</span>
+      </label>
+    );
+  }
+
+  const formattedValue = formatInspectorValue(value, field);
+  const commonProps = {
+    value: formattedValue,
+    placeholder: field.placeholder,
+    onChange: (event: ChangeEvent<HTMLInputElement>) =>
+      onChange(parseInspectorValue(event.target.value, field)),
+  };
+
+  return (
+    <label className="field">
+      <span className="field-label">{field.label}</span>
+      <input
+        {...commonProps}
+        type={field.kind === "number" ? "number" : field.kind === "url" ? "url" : "text"}
+        min={field.min}
+        max={field.max}
+        step={field.step}
+      />
+    </label>
   );
 }

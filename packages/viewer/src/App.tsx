@@ -5,6 +5,7 @@ import {
   clampGridPlacement,
   DashboardRuntimeCard,
   getGridBottom,
+  isComponentVisible,
   resolveRuntimeBreakpoint,
   resolveComponentPlacement,
   runtimeCellSize,
@@ -39,10 +40,19 @@ export function ViewerApp() {
     project && page
       ? project.components.filter((component) => component.pageId === page.pageId)
       : [];
+  const visibleComponents = project
+    ? components.filter((component) =>
+        isComponentVisible(
+          component,
+          project.bindings.filter((binding) => binding.componentId === component.componentId),
+          stateValues,
+        ),
+      )
+    : [];
   const breakpoint = resolveRuntimeBreakpoint(viewportWidth);
   const columns = runtimeColumns[breakpoint];
   const cell = runtimeCellSize[breakpoint];
-  const gridBottom = getGridBottom(components, breakpoint);
+  const gridBottom = getGridBottom(visibleComponents, breakpoint);
   const gridHeight = Math.max(cell * 8, (gridBottom + 1) * cell);
 
   const stateIds = useMemo(
@@ -226,7 +236,7 @@ export function ViewerApp() {
             width: columns * cell,
           }}
         >
-          {components.map((component) => {
+          {visibleComponents.map((component) => {
             const placement = clampGridPlacement(
               resolveComponentPlacement(component, breakpoint),
               columns,

@@ -1,7 +1,8 @@
-import { useState, type MouseEvent, type ReactNode } from "react";
-import { runDashboardAction, type StatePrimitive } from "@dashboard-ng/shared";
+import { useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from "react";
+import { runDashboardAction, type ActionTrigger, type StatePrimitive } from "@dashboard-ng/shared";
 import { RuntimeContainer, RuntimeImage, RuntimeText, RuntimeValue } from "./base";
 import { RuntimeIcon } from "./icons";
+import { resolveConditionalStyleClass } from "./conditionalStyles";
 import {
   formatRuntimeValue,
   getBindingForTarget,
@@ -31,7 +32,7 @@ interface CardContext extends Required<Pick<DashboardRuntimeCardProps, "componen
   disabled: boolean;
   pending: boolean;
   error: string | undefined;
-  runPrimaryAction(event?: MouseEvent): Promise<void>;
+  runAction(trigger: ActionTrigger, event?: MouseEvent | PointerEvent): Promise<void>;
 }
 
 export function DashboardRuntimeCard(props: DashboardRuntimeCardProps) {
@@ -47,7 +48,7 @@ export function DashboardRuntimeCard(props: DashboardRuntimeCardProps) {
     disabled: Boolean(props.disabled),
     pending,
     error,
-    runPrimaryAction: async (event) => {
+    runAction: async (trigger, event) => {
       event?.stopPropagation();
       if (props.disabled || pending) {
         return;
@@ -55,7 +56,7 @@ export function DashboardRuntimeCard(props: DashboardRuntimeCardProps) {
       setPending(true);
       setError(undefined);
       try {
-        await runComponentAction(props);
+        await runComponentAction(props, trigger);
       } catch (actionError) {
         setError(actionError instanceof Error ? actionError.message : String(actionError));
       } finally {
@@ -128,7 +129,12 @@ function LightCard({ context }: { context: CardContext }) {
       status={statusLabel(value, context)}
       tone="light"
       active={active}
-      onClick={context.runPrimaryAction}
+      onClick={(event) => context.runAction("tap", event)}
+      onLongPress={
+        hasActionTrigger(context, "longPress")
+          ? (event) => context.runAction("longPress", event)
+          : undefined
+      }
     >
       <CardTop
         icon="Lightbulb"
@@ -164,10 +170,17 @@ function SceneButton({ context }: { context: CardContext }) {
   return (
     <CardShell
       context={context}
-      interactive={hasTapAction(context) || value.writable}
+      interactive={
+        hasActionTrigger(context, "tap") || hasActionTrigger(context, "longPress") || value.writable
+      }
       status={statusLabel(value, context)}
       tone="scene"
-      onClick={context.runPrimaryAction}
+      onClick={(event) => context.runAction("tap", event)}
+      onLongPress={
+        hasActionTrigger(context, "longPress")
+          ? (event) => context.runAction("longPress", event)
+          : undefined
+      }
     >
       <CardTop icon="Sparkles" title={cardTitle(context)} subtitle={cardSubtitle(context, value)} />
       <RuntimeValue value={context.pending ? "Running" : "Run"} />
@@ -238,7 +251,7 @@ function EnergyCard({ context }: { context: CardContext }) {
 }
 
 function MiniChartCard({ context }: { context: CardContext }) {
-  const value = resolveTargetState(context.bindings, context.stateValues);
+  const value = resolveTargetState(context.bindings, context.stateValues, "samples");
   const samples = getChartSamples(context, value.value);
   return (
     <CardShell context={context} status={statusLabel(value, context)} tone="chart">
@@ -257,7 +270,7 @@ function MiniChartCard({ context }: { context: CardContext }) {
 }
 
 function CameraCard({ context }: { context: CardContext }) {
-  const value = resolveTargetState(context.bindings, context.stateValues);
+  const value = resolveTargetState(context.bindings, context.stateValues, "imageUrl");
   const imageUrl = typeof value.value === "string" ? value.value : propString(context, "imageUrl");
   return (
     <CardShell context={context} status={statusLabel(value, context)} tone="camera">
@@ -287,9 +300,14 @@ function ButtonCard({ context }: { context: CardContext }) {
   return (
     <CardShell
       context={context}
-      interactive={hasTapAction(context)}
+      interactive={hasActionTrigger(context, "tap") || hasActionTrigger(context, "longPress")}
       tone="scene"
-      onClick={context.runPrimaryAction}
+      onClick={(event) => context.runAction("tap", event)}
+      onLongPress={
+        hasActionTrigger(context, "longPress")
+          ? (event) => context.runAction("longPress", event)
+          : undefined
+      }
     >
       <CardTop
         icon="MousePointerClick"
@@ -318,6 +336,7 @@ interface CardShellProps {
   interactive?: boolean;
   status?: string | undefined;
   onClick?(event: MouseEvent): void | Promise<void>;
+  onLongPress?: ((event: PointerEvent) => void | Promise<void>) | undefined;
 }
 
 function CardShell({
@@ -328,12 +347,16 @@ function CardShell({
   interactive = false,
   status,
   onClick,
+  onLongPress,
 }: CardShellProps) {
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const longPressFired = useRef(false);
   const stateClass = [
     active ? "is-active" : "",
     context.pending ? "is-pending" : "",
     context.error ? "has-error" : "",
     statusClass(status),
+    resolveConditionalStyleClass(context.component, context.bindings, context.stateValues),
   ]
     .filter(Boolean)
     .join(" ");
@@ -348,12 +371,40 @@ function CardShell({
   );
 
   if (interactive) {
+    const clearLongPress = () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = undefined;
+      }
+    };
+
     return (
       <button
         className={className}
         disabled={context.disabled}
         type="button"
-        onClick={(event) => void onClick?.(event)}
+        onPointerDown={(event) => {
+          if (!onLongPress) {
+            return;
+          }
+          longPressFired.current = false;
+          clearLongPress();
+          longPressTimer.current = setTimeout(() => {
+            longPressFired.current = true;
+            void onLongPress(event);
+          }, 650);
+        }}
+        onPointerLeave={clearLongPress}
+        onPointerCancel={clearLongPress}
+        onPointerUp={clearLongPress}
+        onClick={(event) => {
+          if (longPressFired.current) {
+            longPressFired.current = false;
+            event.stopPropagation();
+            return;
+          }
+          void onClick?.(event);
+        }}
       >
         {content}
       </button>
@@ -383,11 +434,14 @@ function CardTop({
   );
 }
 
-async function runComponentAction(props: DashboardRuntimeCardProps): Promise<void> {
+async function runComponentAction(
+  props: DashboardRuntimeCardProps,
+  trigger: ActionTrigger,
+): Promise<void> {
   const actions = props.actions ?? [];
-  const tapAction = actions.find((action) => action.trigger === "tap");
-  if (tapAction) {
-    await runDashboardAction(tapAction, {
+  const action = actions.find((candidate) => candidate.trigger === trigger);
+  if (action) {
+    await runDashboardAction(action, {
       getState: async (stateId) => readPrimitiveState(props.stateValues?.[stateId]),
       setState: async (stateId, value) => {
         await props.onWriteState?.(stateId, value);
@@ -407,6 +461,10 @@ async function runComponentAction(props: DashboardRuntimeCardProps): Promise<voi
     return;
   }
 
+  if (trigger !== "tap") {
+    return;
+  }
+
   const binding = getBindingForTarget(props.bindings, "value");
   if (!binding?.stateId || (binding.mode !== "write" && binding.mode !== "readwrite")) {
     return;
@@ -420,11 +478,13 @@ async function runComponentAction(props: DashboardRuntimeCardProps): Promise<voi
 }
 
 function isInteractive(context: CardContext, value: RuntimeTargetState): boolean {
-  return hasTapAction(context) || value.writable;
+  return (
+    hasActionTrigger(context, "tap") || hasActionTrigger(context, "longPress") || value.writable
+  );
 }
 
-function hasTapAction(context: CardContext): boolean {
-  return context.actions.some((action) => action.trigger === "tap");
+function hasActionTrigger(context: CardContext, trigger: ActionTrigger): boolean {
+  return context.actions.some((action) => action.trigger === trigger);
 }
 
 function statusLabel(value: RuntimeTargetState, context: CardContext): string | undefined {
@@ -432,6 +492,9 @@ function statusLabel(value: RuntimeTargetState, context: CardContext): string | 
     return "Loading";
   }
   if (context.error) {
+    return "Error";
+  }
+  if (value.error) {
     return "Error";
   }
   if (value.missing) {

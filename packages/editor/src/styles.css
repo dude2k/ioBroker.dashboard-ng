@@ -294,6 +294,200 @@ button.toolbar-icon-active {
   gap: 8px;
 }
 
+.inspector-meta {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--panel-strong);
+  font-size: 12px;
+}
+
+.inspector-meta code {
+  color: var(--text);
+  font-family: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-title {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.binding-section {
+  display: grid;
+  gap: 10px;
+}
+
+.visibility-section {
+  display: grid;
+  gap: 10px;
+}
+
+.conditional-style-section {
+  display: grid;
+  gap: 10px;
+}
+
+.binding-card,
+.action-card {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
+}
+
+.binding-card.is-missing {
+  border-color: var(--warn);
+}
+
+.binding-header,
+.binding-footer {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.binding-header div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.binding-header strong {
+  font-size: 13px;
+}
+
+.binding-header span,
+.binding-footer,
+.binding-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.formula-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.formula-status.has-error {
+  color: var(--danger);
+}
+
+.binding-header code,
+.binding-footer span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.binding-header code {
+  color: var(--accent);
+  font-family: inherit;
+}
+
+.binding-footer button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.binding-footer button:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.action-section {
+  display: grid;
+  gap: 10px;
+}
+
+.action-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.action-toolbar button,
+.secondary-button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--panel-strong);
+  cursor: pointer;
+}
+
+.action-toolbar button:hover,
+.secondary-button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.action-card > .binding-header button,
+.action-step .binding-header button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.action-card > .binding-header button:hover,
+.action-step .binding-header button:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.action-step {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.checkbox-field {
+  grid-template-columns: 16px 1fr;
+  align-items: center;
+}
+
+.checkbox-field input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
 .palette-item {
   display: grid;
   grid-template-columns: 22px 1fr;
@@ -463,6 +657,10 @@ button.toolbar-icon-active {
   filter: grayscale(0.9);
 }
 
+.component-tile.is-condition-hidden .dng-runtime-card {
+  opacity: 0.42;
+}
+
 .component-tile.is-locked .dng-runtime-card {
   border-style: dashed;
 }
@@ -591,6 +789,7 @@ button.toolbar-icon-active {
 }
 
 .field input,
+.field select,
 .search-field input {
   min-width: 0;
   height: 36px;
@@ -599,6 +798,11 @@ button.toolbar-icon-active {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0 10px;
+}
+
+.field select:disabled {
+  color: var(--muted);
+  opacity: 0.74;
 }
 
 .search-field {

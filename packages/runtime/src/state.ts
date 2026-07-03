@@ -1,4 +1,9 @@
-import type { Binding, StatePrimitive, StateSnapshot } from "@dashboard-ng/shared";
+import {
+  evaluateFormula,
+  type Binding,
+  type StatePrimitive,
+  type StateSnapshot,
+} from "@dashboard-ng/shared";
 import type {
   RuntimeResolvedState,
   RuntimeStateInput,
@@ -19,6 +24,10 @@ export function resolveTargetState(
   target = "value",
 ): RuntimeTargetState {
   const binding = getBindingForTarget(bindings, target);
+  if (binding?.kind === "formula") {
+    return resolveFormulaBinding(binding, values);
+  }
+
   if (!binding?.stateId) {
     return {
       value: undefined,
@@ -42,6 +51,64 @@ export function resolveTargetState(
     binding,
     missing: binding.missing || resolved.missing,
   };
+}
+
+function resolveFormulaBinding(
+  binding: Binding,
+  values: RuntimeStateValues | undefined,
+): RuntimeTargetState {
+  const source = binding.stateId ? resolveRuntimeState(values?.[binding.stateId]) : undefined;
+  if (binding.stateId && (!source || source.loading)) {
+    return {
+      value: undefined,
+      empty: false,
+      missing: Boolean(binding.missing || source?.missing),
+      loading: true,
+      readable: true,
+      writable: false,
+      stateId: binding.stateId,
+      binding,
+    };
+  }
+
+  try {
+    return {
+      value: evaluateFormula(binding.formula ?? "0", buildFormulaContext(values, binding)),
+      empty: false,
+      missing: Boolean(binding.missing || source?.missing),
+      loading: false,
+      readable: true,
+      writable: false,
+      ...(binding.stateId ? { stateId: binding.stateId } : {}),
+      binding,
+    };
+  } catch (error) {
+    return {
+      value: undefined,
+      empty: false,
+      missing: Boolean(binding.missing || source?.missing),
+      loading: false,
+      error: error instanceof Error ? error.message : String(error),
+      readable: true,
+      writable: false,
+      ...(binding.stateId ? { stateId: binding.stateId } : {}),
+      binding,
+    };
+  }
+}
+
+function buildFormulaContext(
+  values: RuntimeStateValues | undefined,
+  binding: Binding,
+): Record<string, StatePrimitive | undefined> {
+  const context: Record<string, StatePrimitive | undefined> = {};
+  Object.entries(values ?? {}).forEach(([stateId, input]) => {
+    context[stateId] = readPrimitiveState(input);
+  });
+  if (binding.stateId) {
+    context.value = readPrimitiveState(values?.[binding.stateId]);
+  }
+  return context;
 }
 
 export function resolveRuntimeState(input: RuntimeStateInput): RuntimeResolvedState {
