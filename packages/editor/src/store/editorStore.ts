@@ -2,9 +2,12 @@ import { create, type StoreApi } from "zustand";
 import {
   createComponentFromCatalog,
   createDefaultDashboard,
+  type DeviceMapping,
   getCatalogEntry,
+  type ActionCondition,
   type Binding,
   type BindingMode,
+  type BindingTransform,
   type ActionStep,
   type ActionTrigger,
   type DashboardAction,
@@ -33,6 +36,7 @@ import {
 
 export type PreviewSize = PreviewDevice;
 export type VisibilityOperator = "equals" | "notEquals" | "greaterThan" | "lessThan";
+export type ActionStepBranch = "steps" | "elseSteps";
 
 interface ClipboardData {
   components: DashboardComponent[];
@@ -94,14 +98,27 @@ interface EditorState {
     stateId: string | undefined,
     formula: string,
   ): void;
+  setComponentBindingTransform(
+    componentId: string,
+    target: string,
+    transform: BindingTransform | undefined,
+  ): void;
+  applyComponentDeviceMapping(componentId: string, mapping: DeviceMapping): void;
   removeComponentBinding(componentId: string, target: string): void;
   setPrimaryBinding(componentId: string, stateId: string, mode: BindingMode): void;
   addComponentAction(componentId: string, trigger: ActionTrigger): void;
   updateComponentActionTrigger(actionId: string, trigger: ActionTrigger): void;
-  updateComponentActionStep(actionId: string, stepIndex: number, step: ActionStep): void;
-  addComponentActionStep(actionId: string): void;
-  removeComponentActionStep(actionId: string, stepIndex: number): void;
+  setComponentActionCondition(actionId: string, condition: ActionCondition | undefined): void;
+  updateComponentActionStep(
+    actionId: string,
+    stepIndex: number,
+    step: ActionStep,
+    branch?: ActionStepBranch,
+  ): void;
+  addComponentActionStep(actionId: string, branch?: ActionStepBranch): void;
+  removeComponentActionStep(actionId: string, stepIndex: number, branch?: ActionStepBranch): void;
   removeComponentAction(actionId: string): void;
+  setAdvancedMode(enabled: boolean): void;
   setComponentVisibility(componentId: string, visibility: VisibilityRule): void;
   setComponentVisibilityCondition(
     componentId: string,
@@ -453,6 +470,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     let binding = nextProject.bindings.find(
       (item) => item.componentId === componentId && item.target === target,
     );
+    if (
+      binding &&
+      target === "value" &&
+      (component.type === "light-card" || component.type === "scene-button")
+    ) {
+      removeGeneratedActionsForState(nextProject, component, binding.stateId);
+    }
     if (!binding) {
       binding = {
         bindingId: createId("bind"),
@@ -495,6 +519,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     let binding = nextProject.bindings.find(
       (item) => item.componentId === componentId && item.target === target,
     );
+    if (
+      binding &&
+      target === "value" &&
+      (component.type === "light-card" || component.type === "scene-button")
+    ) {
+      removeGeneratedActionsForState(nextProject, component, binding.stateId);
+    }
     if (!binding) {
       binding = {
         bindingId: createId("bind"),
@@ -524,6 +555,68 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     nextProject.updatedAt = new Date().toISOString();
     commit(set, state, nextProject, state.selectedIds, "Formula binding updated");
+  },
+
+  setComponentBindingTransform(componentId, target, transform) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const binding = nextProject.bindings.find(
+      (item) => item.componentId === componentId && item.target === target,
+    );
+    if (!binding) {
+      return;
+    }
+
+    if (transform && Object.values(transform).some((value) => value !== undefined)) {
+      binding.transform = transform;
+    } else {
+      delete binding.transform;
+    }
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Value transform updated");
+  },
+
+  applyComponentDeviceMapping(componentId, mapping) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const component = nextProject.components.find((item) => item.componentId === componentId);
+    if (!component) {
+      return;
+    }
+
+    let added = 0;
+    mapping.bindings.forEach((mapped) => {
+      const existing = nextProject.bindings.find(
+        (binding) => binding.componentId === componentId && binding.target === mapped.target,
+      );
+      if (existing) {
+        return;
+      }
+      const binding: Binding = {
+        bindingId: createId("bind"),
+        componentId,
+        target: mapped.target,
+        kind: "state",
+        mode: mapped.mode,
+        stateId: mapped.stateId,
+        missing: false,
+      };
+      nextProject.bindings.push(binding);
+      component.bindingIds = uniqueIds([...component.bindingIds, binding.bindingId]);
+      added += 1;
+
+      if (mapped.target === "value" && component.type === "light-card") {
+        ensureToggleAction(nextProject, component, mapped.stateId);
+      }
+      if (mapped.target === "value" && component.type === "scene-button") {
+        ensureSetStateAction(nextProject, component, mapped.stateId);
+      }
+    });
+    if (!added) {
+      return;
+    }
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, `${mapping.kind} device mapped`);
   },
 
   removeComponentBinding(componentId, target) {
@@ -597,39 +690,64 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     commit(set, state, nextProject, state.selectedIds, "Action updated");
   },
 
-  updateComponentActionStep(actionId, stepIndex, step) {
-    const state = get();
-    const nextProject = cloneProject(state.project);
-    const action = nextProject.actions.find((item) => item.actionId === actionId);
-    if (!action || !action.steps[stepIndex]) {
-      return;
-    }
-    action.steps[stepIndex] = step;
-    nextProject.updatedAt = new Date().toISOString();
-    commit(set, state, nextProject, state.selectedIds, "Action updated");
-  },
-
-  addComponentActionStep(actionId) {
+  setComponentActionCondition(actionId, condition) {
     const state = get();
     const nextProject = cloneProject(state.project);
     const action = nextProject.actions.find((item) => item.actionId === actionId);
     if (!action) {
       return;
     }
-    action.steps.push(defaultActionStep(nextProject));
+    if (condition) {
+      action.condition = condition;
+    } else {
+      delete action.condition;
+      delete action.elseSteps;
+    }
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Action condition updated");
+  },
+
+  updateComponentActionStep(actionId, stepIndex, step, branch = "steps") {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const action = nextProject.actions.find((item) => item.actionId === actionId);
+    const steps = action ? action[branch] : undefined;
+    if (!action || !steps?.[stepIndex]) {
+      return;
+    }
+    steps[stepIndex] = step;
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Action updated");
+  },
+
+  addComponentActionStep(actionId, branch = "steps") {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const action = nextProject.actions.find((item) => item.actionId === actionId);
+    if (!action) {
+      return;
+    }
+    if (branch === "elseSteps") {
+      action.elseSteps = [...(action.elseSteps ?? []), defaultActionStep(nextProject)];
+    } else {
+      action.steps.push(defaultActionStep(nextProject));
+    }
     nextProject.updatedAt = new Date().toISOString();
     commit(set, state, nextProject, state.selectedIds, "Action step added");
   },
 
-  removeComponentActionStep(actionId, stepIndex) {
+  removeComponentActionStep(actionId, stepIndex, branch = "steps") {
     const state = get();
     const nextProject = cloneProject(state.project);
     const action = nextProject.actions.find((item) => item.actionId === actionId);
-    if (!action || !action.steps[stepIndex]) {
+    const steps = action ? action[branch] : undefined;
+    if (!action || !steps?.[stepIndex]) {
       return;
     }
-    action.steps.splice(stepIndex, 1);
-    if (!action.steps.length) {
+    steps.splice(stepIndex, 1);
+    if (branch === "elseSteps" && !steps.length) {
+      delete action.elseSteps;
+    } else if (!action.steps.length) {
       action.steps.push(defaultActionStep(nextProject));
     }
     nextProject.updatedAt = new Date().toISOString();
@@ -652,6 +770,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
     nextProject.updatedAt = new Date().toISOString();
     commit(set, state, nextProject, state.selectedIds, "Action removed");
+  },
+
+  setAdvancedMode(enabled) {
+    const state = get();
+    if (state.project.settings.advancedMode === enabled) {
+      return;
+    }
+    const nextProject = cloneProject(state.project);
+    nextProject.settings.advancedMode = enabled;
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Advanced mode updated");
   },
 
   setComponentVisibility(componentId, visibility) {

@@ -43,8 +43,19 @@ describe("inspector field definitions", () => {
   });
 
   it("defines binding targets for MVP runtime properties", () => {
-    expect(getBindingTargets("light-card")).toEqual([
-      expect.objectContaining({ target: "value", defaultMode: "readwrite" }),
+    expect(getBindingTargets("light-card").map((target) => target.target)).toEqual([
+      "value",
+      "brightness",
+    ]);
+    expect(getBindingTargets("thermostat-card").map((target) => target.target)).toEqual([
+      "value",
+      "target",
+    ]);
+    expect(getBindingTargets("blind-card").map((target) => target.target)).toEqual([
+      "value",
+      "open",
+      "close",
+      "stop",
     ]);
     expect(getBindingTargets("mini-chart-card")).toEqual([
       expect.objectContaining({ target: "samples", defaultMode: "read" }),

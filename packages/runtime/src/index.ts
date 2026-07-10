@@ -4,6 +4,7 @@ export * from "./diagnostics";
 export * from "./iobrokerFiles";
 export * from "./iobrokerSocket";
 export * from "./layout";
+export * from "./liveStates";
 export * from "./state";
 export * from "./types";
 export * from "./visibility";

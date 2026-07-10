@@ -54,4 +54,34 @@ describe("editor action configuration", () => {
     );
     expect(component.actionIds).toEqual([]);
   });
+
+  it("stores swipe conditions, else steps and advanced mode", () => {
+    useEditorStore.getState().setAdvancedMode(true);
+    useEditorStore.getState().addComponent("sensor-card");
+    const componentId = useEditorStore.getState().selectedIds[0]!;
+
+    useEditorStore.getState().addComponentAction(componentId, "swipe");
+    let action = useEditorStore
+      .getState()
+      .project.actions.find((candidate) => candidate.componentId === componentId)!;
+    useEditorStore.getState().setComponentActionCondition(action.actionId, {
+      kind: "stateGreaterThan",
+      stateId: "alias.0.temperature",
+      value: 25,
+    });
+    useEditorStore.getState().addComponentActionStep(action.actionId, "elseSteps");
+
+    action = useEditorStore
+      .getState()
+      .project.actions.find((candidate) => candidate.actionId === action.actionId)!;
+    expect(useEditorStore.getState().project.settings.advancedMode).toBe(true);
+    expect(action.trigger).toBe("swipe");
+    expect(action.condition).toEqual({
+      kind: "stateGreaterThan",
+      stateId: "alias.0.temperature",
+      value: 25,
+    });
+    expect(action.elseSteps).toHaveLength(1);
+    expect(validateDashboardProject(useEditorStore.getState().project).valid).toBe(true);
+  });
 });

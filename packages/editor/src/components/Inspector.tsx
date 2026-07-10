@@ -1,14 +1,19 @@
 import { CopyPlus, Eye, EyeOff, Lock, Plus, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
 import {
+  detectDeviceMapping,
   evaluateFormula,
   type FormulaContext,
+  type ActionCondition,
   type ActionStep,
   type ActionTrigger,
   type Binding,
   type BindingMode,
+  type BindingTransform,
+  type ComponentType,
   type Page,
   type StatePrimitive,
+  type StateOption,
   type VisibilityRule,
 } from "@dashboard-ng/shared";
 import {
@@ -35,15 +40,21 @@ export function Inspector() {
   const updateComponentProps = useEditorStore((state) => state.updateComponentProps);
   const setComponentBinding = useEditorStore((state) => state.setComponentBinding);
   const setComponentFormulaBinding = useEditorStore((state) => state.setComponentFormulaBinding);
+  const setComponentBindingTransform = useEditorStore(
+    (state) => state.setComponentBindingTransform,
+  );
+  const applyComponentDeviceMapping = useEditorStore((state) => state.applyComponentDeviceMapping);
   const removeComponentBinding = useEditorStore((state) => state.removeComponentBinding);
   const addComponentAction = useEditorStore((state) => state.addComponentAction);
   const updateComponentActionTrigger = useEditorStore(
     (state) => state.updateComponentActionTrigger,
   );
   const updateComponentActionStep = useEditorStore((state) => state.updateComponentActionStep);
+  const setComponentActionCondition = useEditorStore((state) => state.setComponentActionCondition);
   const addComponentActionStep = useEditorStore((state) => state.addComponentActionStep);
   const removeComponentActionStep = useEditorStore((state) => state.removeComponentActionStep);
   const removeComponentAction = useEditorStore((state) => state.removeComponentAction);
+  const setAdvancedMode = useEditorStore((state) => state.setAdvancedMode);
   const setComponentVisibility = useEditorStore((state) => state.setComponentVisibility);
   const setComponentVisibilityCondition = useEditorStore(
     (state) => state.setComponentVisibilityCondition,
@@ -118,6 +129,15 @@ export function Inspector() {
           <code>{component.componentId}</code>
         </div>
 
+        <label className="field checkbox-field advanced-mode-toggle">
+          <input
+            type="checkbox"
+            checked={project.settings.advancedMode}
+            onChange={(event) => setAdvancedMode(event.target.checked)}
+          />
+          <span className="field-label">Advanced mode</span>
+        </label>
+
         {getInspectorFields(component.type).map((field) => (
           <InspectorFieldControl
             key={field.prop}
@@ -145,10 +165,17 @@ export function Inspector() {
                   key={target.target}
                   target={target}
                   binding={binding}
+                  componentType={component.type}
                   stateValues={stateValues}
-                  onSelectState={(stateId, mode) =>
-                    setComponentBinding(component.componentId, target.target, stateId, mode)
-                  }
+                  onSelectState={(stateId, mode, option, candidates) => {
+                    setComponentBinding(component.componentId, target.target, stateId, mode);
+                    if (option && candidates) {
+                      applyComponentDeviceMapping(
+                        component.componentId,
+                        detectDeviceMapping(option, candidates, component.type),
+                      );
+                    }
+                  }}
                   onSetFormula={(stateId, formula) =>
                     setComponentFormulaBinding(
                       component.componentId,
@@ -167,6 +194,10 @@ export function Inspector() {
                       );
                     }
                   }}
+                  advancedMode={project.settings.advancedMode}
+                  onSetTransform={(transform) =>
+                    setComponentBindingTransform(component.componentId, target.target, transform)
+                  }
                   onRemove={() => removeComponentBinding(component.componentId, target.target)}
                 />
               );
@@ -174,23 +205,27 @@ export function Inspector() {
           </div>
         ) : null}
 
-        <VisibilityControl
-          binding={getComponentBinding(project, component, "visibility")}
-          visibility={component.visibility}
-          onSetAlways={() => setComponentVisibility(component.componentId, { kind: "always" })}
-          onSetCondition={(stateId, operator, expected) =>
-            setComponentVisibilityCondition(component.componentId, stateId, operator, expected)
-          }
-          onSetFormula={(formula) =>
-            setComponentVisibility(component.componentId, { kind: "formula", formula })
-          }
-        />
+        {project.settings.advancedMode ? (
+          <>
+            <VisibilityControl
+              binding={getComponentBinding(project, component, "visibility")}
+              visibility={component.visibility}
+              onSetAlways={() => setComponentVisibility(component.componentId, { kind: "always" })}
+              onSetCondition={(stateId, operator, expected) =>
+                setComponentVisibilityCondition(component.componentId, stateId, operator, expected)
+              }
+              onSetFormula={(formula) =>
+                setComponentVisibility(component.componentId, { kind: "formula", formula })
+              }
+            />
 
-        <ConditionalStyleControl
-          binding={getComponentBinding(project, component, "style")}
-          rule={getConditionalStyleRule(component)}
-          onChange={(rule) => setComponentConditionalStyle(component.componentId, rule)}
-        />
+            <ConditionalStyleControl
+              binding={getComponentBinding(project, component, "style")}
+              rule={getConditionalStyleRule(component)}
+              onChange={(rule) => setComponentConditionalStyle(component.componentId, rule)}
+            />
+          </>
+        ) : null}
 
         <div className="action-section">
           <div className="section-title">Actions</div>
@@ -206,6 +241,15 @@ export function Inspector() {
               <Plus size={14} aria-hidden="true" />
               <span>Long</span>
             </button>
+            {project.settings.advancedMode ? (
+              <button
+                type="button"
+                onClick={() => addComponentAction(component.componentId, "swipe")}
+              >
+                <Plus size={14} aria-hidden="true" />
+                <span>Swipe</span>
+              </button>
+            ) : null}
           </div>
           {componentActions.length ? (
             componentActions.map((action) => (
@@ -239,8 +283,23 @@ export function Inspector() {
                   >
                     <option value="tap">Tap</option>
                     <option value="longPress">Long press</option>
+                    {project.settings.advancedMode || action.trigger === "swipe" ? (
+                      <option value="swipe">Swipe</option>
+                    ) : null}
                   </select>
                 </label>
+
+                {project.settings.advancedMode ? (
+                  <ActionConditionControl
+                    condition={action.condition}
+                    stateValues={stateValues}
+                    onChange={(condition) =>
+                      setComponentActionCondition(action.actionId, condition)
+                    }
+                  />
+                ) : null}
+
+                <div className="action-branch-label">{action.condition ? "Then" : "Steps"}</div>
 
                 {action.steps.map((step, stepIndex) => (
                   <ActionStepControl
@@ -263,6 +322,39 @@ export function Inspector() {
                   <Plus size={14} aria-hidden="true" />
                   <span>Add step</span>
                 </button>
+
+                {project.settings.advancedMode && action.condition ? (
+                  <div className="action-else-branch">
+                    <div className="action-branch-label">Else</div>
+                    {(action.elseSteps ?? []).map((step, stepIndex) => (
+                      <ActionStepControl
+                        key={`${action.actionId}-else-${stepIndex}`}
+                        pages={project.pages}
+                        step={step}
+                        stepIndex={stepIndex}
+                        onChange={(nextStep) =>
+                          updateComponentActionStep(
+                            action.actionId,
+                            stepIndex,
+                            nextStep,
+                            "elseSteps",
+                          )
+                        }
+                        onRemove={() =>
+                          removeComponentActionStep(action.actionId, stepIndex, "elseSteps")
+                        }
+                      />
+                    ))}
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => addComponentActionStep(action.actionId, "elseSteps")}
+                    >
+                      <Plus size={14} aria-hidden="true" />
+                      <span>Add else step</span>
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ))
           ) : (
@@ -286,18 +378,29 @@ export function Inspector() {
 function BindingTargetControl({
   target,
   binding,
+  componentType,
   stateValues,
   onSelectState,
   onSetFormula,
   onChangeMode,
+  advancedMode,
+  onSetTransform,
   onRemove,
 }: {
   target: InspectorBindingTarget;
   binding: Binding | undefined;
+  componentType: ComponentType;
   stateValues: Record<string, StatePrimitive>;
-  onSelectState(stateId: string, mode: BindingMode): void;
+  onSelectState(
+    stateId: string,
+    mode: BindingMode,
+    option?: StateOption,
+    candidates?: StateOption[],
+  ): void;
   onSetFormula(stateId: string | undefined, formula: string): void;
   onChangeMode(mode: BindingMode): void;
+  advancedMode: boolean;
+  onSetTransform(transform: BindingTransform | undefined): void;
   onRemove(): void;
 }) {
   const source = binding?.kind === "formula" ? "formula" : "state";
@@ -307,6 +410,14 @@ function BindingTargetControl({
     : [selectedMode, ...target.modes];
   const formula = binding?.formula ?? "value";
   const formulaValidation = validateInspectorFormula(formula, binding?.stateId, stateValues);
+  const pickerAccess =
+    source === "formula"
+      ? "read"
+      : !binding && target.modes.includes("read")
+        ? "any"
+        : selectedMode === "read"
+          ? "read"
+          : "write";
 
   return (
     <div className={binding?.missing ? "binding-card is-missing" : "binding-card"}>
@@ -355,10 +466,17 @@ function BindingTargetControl({
       <StatePicker
         label={source === "formula" ? "Input state" : "State"}
         value={binding?.stateId}
-        onSelect={(stateId) =>
+        access={pickerAccess}
+        {...(source === "state" ? { componentType } : {})}
+        onSelect={(stateId, option, candidates) =>
           source === "formula"
             ? onSetFormula(stateId, formula)
-            : onSelectState(stateId, selectedMode)
+            : onSelectState(
+                stateId,
+                bindingModeForOption(selectedMode, target.modes, option),
+                option,
+                candidates,
+              )
         }
       />
 
@@ -376,6 +494,10 @@ function BindingTargetControl({
         </label>
       ) : null}
 
+      {advancedMode && binding ? (
+        <BindingTransformControl transform={binding.transform} onChange={onSetTransform} />
+      ) : null}
+
       {binding ? (
         <div className="binding-footer">
           <span>{binding.missing ? "Missing state" : binding.stateId}</span>
@@ -386,6 +508,81 @@ function BindingTargetControl({
       ) : (
         <div className="binding-hint">No state selected</div>
       )}
+    </div>
+  );
+}
+
+function BindingTransformControl({
+  transform,
+  onChange,
+}: {
+  transform: BindingTransform | undefined;
+  onChange(transform: BindingTransform | undefined): void;
+}) {
+  const format = transform?.format ?? "raw";
+  const update = (patch: Partial<BindingTransform>, remove: Array<keyof BindingTransform> = []) => {
+    const next = { ...transform, ...patch };
+    remove.forEach((key) => delete next[key]);
+    const normalized: BindingTransform = {};
+    if (next.format && next.format !== "raw") {
+      normalized.format = next.format;
+    }
+    if (next.decimals !== undefined) {
+      normalized.decimals = Math.max(0, Math.min(6, next.decimals));
+    }
+    if (next.formula?.trim()) {
+      normalized.formula = next.formula;
+    }
+    onChange(Object.keys(normalized).length ? normalized : undefined);
+  };
+
+  return (
+    <div className="binding-transform">
+      <div className="action-branch-label">Value transform</div>
+      <label className="field">
+        <span className="field-label">Format</span>
+        <select
+          value={format}
+          onChange={(event) =>
+            update({ format: event.target.value as NonNullable<BindingTransform["format"]> })
+          }
+        >
+          <option value="raw">Raw</option>
+          <option value="number">Number</option>
+          <option value="percent">Percent</option>
+          <option value="temperature">Temperature</option>
+          <option value="power">Power</option>
+          <option value="energy">Energy</option>
+        </select>
+      </label>
+      <label className="field">
+        <span className="field-label">Decimals</span>
+        <input
+          type="number"
+          min="0"
+          max="6"
+          step="1"
+          value={transform?.decimals ?? ""}
+          onChange={(event) => {
+            if (event.target.value === "") {
+              update({}, ["decimals"]);
+            } else {
+              update({ decimals: Number(event.target.value) });
+            }
+          }}
+          placeholder="Automatic"
+        />
+      </label>
+      <label className="field">
+        <span className="field-label">Transform formula</span>
+        <input
+          value={transform?.formula ?? ""}
+          onChange={(event) =>
+            event.target.value ? update({ formula: event.target.value }) : update({}, ["formula"])
+          }
+          placeholder="value / 1000"
+        />
+      </label>
     </div>
   );
 }
@@ -607,6 +804,20 @@ function modeLabel(mode: BindingMode): string {
   }
 }
 
+function bindingModeForOption(
+  selectedMode: BindingMode,
+  supportedModes: BindingMode[],
+  option: StateOption,
+): BindingMode {
+  if (selectedMode === "read" && !option.read && option.write && supportedModes.includes("write")) {
+    return "write";
+  }
+  if (selectedMode !== "read" && !option.write && option.read && supportedModes.includes("read")) {
+    return "read";
+  }
+  return selectedMode;
+}
+
 function validateInspectorFormula(
   formula: string,
   stateId: string | undefined,
@@ -631,6 +842,105 @@ function validateInspectorFormula(
       message: error instanceof Error ? error.message : "Formula is invalid",
     };
   }
+}
+
+type ActionConditionMode = "none" | ActionCondition["kind"];
+
+function ActionConditionControl({
+  condition,
+  stateValues,
+  onChange,
+}: {
+  condition: ActionCondition | undefined;
+  stateValues: Record<string, StatePrimitive>;
+  onChange(condition: ActionCondition | undefined): void;
+}) {
+  const mode: ActionConditionMode = condition?.kind ?? "none";
+  const formula = condition?.formula ?? "true";
+  const expected = condition?.value ?? true;
+  const formulaValidation = validateInspectorFormula(formula, condition?.stateId, stateValues);
+
+  return (
+    <div className="action-condition">
+      <div className="action-branch-label">Condition</div>
+      <label className="field">
+        <span className="field-label">Run when</span>
+        <select
+          value={mode}
+          onChange={(event) => {
+            const nextMode = event.target.value as ActionConditionMode;
+            if (nextMode === "none") {
+              onChange(undefined);
+            } else if (nextMode === "formula") {
+              onChange({
+                kind: "formula",
+                ...(condition?.stateId ? { stateId: condition.stateId } : {}),
+                formula,
+              });
+            } else {
+              onChange({ kind: nextMode, stateId: condition?.stateId ?? "", value: expected });
+            }
+          }}
+        >
+          <option value="none">Always</option>
+          <option value="stateEquals">State equals</option>
+          <option value="stateNotEquals">State not equals</option>
+          <option value="stateGreaterThan">State greater than</option>
+          <option value="stateLessThan">State less than</option>
+          <option value="formula">Formula is true</option>
+        </select>
+      </label>
+
+      {mode !== "none" ? (
+        <StatePicker
+          label={mode === "formula" ? "Input state (optional)" : "State"}
+          value={condition?.stateId}
+          onSelect={(stateId) =>
+            mode === "formula"
+              ? onChange({ kind: "formula", stateId, formula })
+              : onChange({ kind: mode, stateId, value: expected })
+          }
+        />
+      ) : null}
+
+      {mode === "formula" ? (
+        <label className="field">
+          <span className="field-label">Formula</span>
+          <input
+            value={formula}
+            onChange={(event) =>
+              onChange({
+                kind: "formula",
+                ...(condition?.stateId ? { stateId: condition.stateId } : {}),
+                formula: event.target.value,
+              })
+            }
+            placeholder="value > 10"
+          />
+          <span className={formulaValidation.valid ? "formula-status" : "formula-status has-error"}>
+            {formulaValidation.message}
+          </span>
+        </label>
+      ) : null}
+
+      {mode !== "none" && mode !== "formula" ? (
+        <label className="field">
+          <span className="field-label">Expected</span>
+          <input
+            value={formatActionValue(expected)}
+            onChange={(event) =>
+              onChange({
+                kind: mode,
+                stateId: condition?.stateId ?? "",
+                value: parseActionValue(event.target.value),
+              })
+            }
+            placeholder="true, 1, text"
+          />
+        </label>
+      ) : null}
+    </div>
+  );
 }
 
 function ActionStepControl({
@@ -711,6 +1021,7 @@ function ActionStepControl({
         <StatePicker
           label="State"
           value={step.stateId}
+          access="write"
           onSelect={(stateId) => onChange({ ...step, stateId } as ActionStep)}
         />
       ) : null}

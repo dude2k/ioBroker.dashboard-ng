@@ -35,17 +35,27 @@ Completed work packages:
 - AP3d: responsive preview devices with portrait/landscape handling.
 - AP3e: multi-select, duplicate, lock, editor-hide and keyboard basics.
 - AP3f: local validation, documentation alignment and checker cleanup.
+- AP4a-AP4f: card properties, target bindings, actions, visibility,
+  conditional styles and prepared formula bindings.
+- AP4g: value transforms, action conditions and else steps, horizontal swipe
+  actions, and Advanced Mode for complex inspector controls.
+- AP5a: searchable ioBroker object tree with access, alias, enum, range and
+  state-quality metadata.
+- AP5b: metadata-based device mapping for lights, thermostats, blinds, sensors,
+  scenes, energy meters and cameras with manual overrides.
+- AP6a: deduplicated active-page live state subscriptions with batched updates,
+  cleanup and polling fallback.
 
 Deferred from the original Work Package 3 scope into later MVP work:
 
 - First-class section/container authoring UI.
 - Nested component editing where supported by the schema.
-- Advanced Mode for exact layout values and breakpoint overrides.
+- Exact layout values and breakpoint overrides inside Advanced Mode.
 - Optional lightweight alignment tools.
 
 ## Post-MVP
 
-- Rich per-card inspector controls.
+- Additional specialist controls for individual card types.
 - Mini Chart history abstraction.
 - Camera asset and snapshot source management.
 - Better device mapping heuristics.

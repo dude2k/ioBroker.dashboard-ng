@@ -236,6 +236,8 @@ export interface DashboardProject {
 export interface StateOption {
   id: string;
   name: string;
+  names?: string[];
+  parentId?: string;
   type: "boolean" | "number" | "string" | "mixed" | "object" | "array" | "unknown";
   role?: string;
   unit?: string;
@@ -244,7 +246,18 @@ export interface StateOption {
   read: boolean;
   write: boolean;
   room?: string;
+  rooms?: string[];
   function?: string;
+  functions?: string[];
+  alias?: boolean;
+  aliasTarget?: string;
+  value?: StatePrimitive;
+  ack?: boolean;
+  q?: number;
+  ts?: number;
+  lc?: number;
+  missing?: boolean;
+  deleted?: boolean;
 }
 
 export interface StateSnapshot {

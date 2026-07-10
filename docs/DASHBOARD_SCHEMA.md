@@ -102,6 +102,10 @@ Bindings connect component properties to ioBroker states or formulas:
 - `transform`
 - `missing`
 
+Optional value transforms can apply a safe formula using `value`, round to a
+configured number of decimal places and select a display format such as number,
+percent, temperature, power or energy.
+
 ## Action
 
 Actions describe interactions:
@@ -109,6 +113,11 @@ Actions describe interactions:
 - Trigger: `tap`, `longPress`, `swipe`
 - Optional condition
 - Steps such as set state, toggle state, navigate, open URL or run scene
+- Optional ordered `elseSteps` when the condition is false
+
+Formula conditions can use an optional input state through the `value`
+identifier. Swipe means one direction-independent horizontal swipe; direction
+specific gestures are intentionally outside the MVP schema.
 
 Actions are intentionally simple. They are not an automation platform.
 

@@ -425,8 +425,31 @@ button.toolbar-icon-active {
 
 .action-toolbar {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
   gap: 8px;
+}
+
+.advanced-mode-toggle {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
+}
+
+.binding-transform,
+.action-condition,
+.action-else-branch {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.action-branch-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .action-toolbar button,
@@ -807,7 +830,7 @@ button.toolbar-icon-active {
 
 .search-field {
   display: grid;
-  grid-template-columns: 18px 1fr;
+  grid-template-columns: 18px minmax(0, 1fr) 28px;
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
@@ -824,9 +847,26 @@ button.toolbar-icon-active {
   background: transparent;
 }
 
+.search-field button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.search-field button:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 .state-list {
   display: grid;
-  max-height: 240px;
+  max-height: 320px;
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -850,6 +890,95 @@ button.toolbar-icon-active {
 .state-row:hover,
 .state-row.is-selected {
   background: var(--panel-strong);
+}
+
+.state-row:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.state-row.is-missing,
+.state-selection.is-missing {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.state-tree-node {
+  min-width: 0;
+  background: var(--panel);
+}
+
+.state-tree-node > summary {
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.state-tree-node > summary span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state-tree-node > summary small {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.state-tree-children {
+  margin-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.state-selection {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--panel-strong);
+  font-size: 11px;
+}
+
+.state-selection-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text);
+}
+
+.state-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.state-badges span {
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.state-badges .has-warning,
+.state-empty.has-error {
+  color: var(--warn);
+}
+
+.state-empty {
+  padding: 12px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .state-name {

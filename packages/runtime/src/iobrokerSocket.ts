@@ -8,6 +8,16 @@ export interface IoBrokerCommandResponse<T> {
 }
 
 export interface IoBrokerSocketLike {
+  subscribeState?(
+    stateIds: string | string[],
+    callback: (id: string, state: IoBrokerStateChange | null | undefined) => void,
+  ): Promise<void> | void;
+  unsubscribeState?(
+    stateIds: string | string[],
+    callback?: (id: string, state: IoBrokerStateChange | null | undefined) => void,
+  ): Promise<void> | void;
+  registerConnectionHandler?(callback: (connected: boolean) => void): void;
+  unregisterConnectionHandler?(callback: (connected: boolean) => void): void;
   readFile?(
     adapterName: string | null,
     path: string,
@@ -32,6 +42,14 @@ export interface IoBrokerSocketLike {
     data: ArrayBuffer | string,
   ): Promise<unknown> | void;
   emit?(event: string, ...args: unknown[]): void;
+}
+
+interface IoBrokerStateChange {
+  val: string | number | boolean | null;
+  ack?: boolean;
+  q?: number;
+  ts?: number;
+  lc?: number;
 }
 
 export interface IoBrokerCommandOptions {
@@ -265,6 +283,8 @@ export function describeIoBrokerSocket(socket: IoBrokerSocketLike): string {
     ["readFile", socket.readFile],
     ["writeFile", socket.writeFile],
     ["writeFile64", socket.writeFile64],
+    ["subscribeState", socket.subscribeState],
+    ["unsubscribeState", socket.unsubscribeState],
     ["emit", socket.emit],
   ]
     .filter(([, value]) => typeof value === "function")
@@ -277,7 +297,8 @@ function isUsableSocket(socket: IoBrokerSocketLike): boolean {
     typeof socket.sendTo === "function" ||
     typeof socket.readFile === "function" ||
     typeof socket.writeFile === "function" ||
-    typeof socket.writeFile64 === "function"
+    typeof socket.writeFile64 === "function" ||
+    typeof socket.subscribeState === "function"
   );
 }
 

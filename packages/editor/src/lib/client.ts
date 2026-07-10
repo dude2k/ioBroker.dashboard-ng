@@ -20,6 +20,7 @@ const STORAGE_KEY = "dashboard-ng.editor.project";
 const STATE_KEY = "dashboard-ng.editor.states";
 const ADAPTER_NAME = "dashboard-ng";
 const DEFAULT_DASHBOARD_ID = "default";
+let stateOptionsPromise: Promise<StateOption[]> | undefined;
 
 export const dashboardClient = {
   async loadDashboard(): Promise<DashboardProject> {
@@ -160,19 +161,15 @@ export const dashboardClient = {
     return dashboard;
   },
 
-  async searchObjects(query: string): Promise<StateOption[]> {
-    const response = await sendToSilently<StateOption[]>("objects.search", { query, limit: 80 });
-    if (response) {
-      return response;
+  async searchObjects(query = "", limit = 2500, refresh = false): Promise<StateOption[]> {
+    if (!query.trim()) {
+      if (refresh) {
+        stateOptionsPromise = undefined;
+      }
+      stateOptionsPromise ??= loadStateOptions("", limit);
+      return stateOptionsPromise;
     }
-
-    const demoStates = createDemoStates();
-    const normalized = query.trim().toLowerCase();
-    return demoStates.filter((state) => {
-      const text =
-        `${state.id} ${state.name} ${state.role ?? ""} ${state.unit ?? ""}`.toLowerCase();
-      return !normalized || text.includes(normalized);
-    });
+    return loadStateOptions(query, limit);
   },
 
   async readStates(stateIds: string[]): Promise<StateSnapshot[]> {
@@ -211,6 +208,33 @@ export const dashboardClient = {
     };
   },
 };
+
+async function loadStateOptions(query: string, limit: number): Promise<StateOption[]> {
+  const response = await sendToSilently<StateOption[]>("objects.search", { query, limit });
+  if (response) {
+    return response;
+  }
+
+  const normalized = query.trim().toLowerCase();
+  return createDemoStates().filter((state) => {
+    const text = [
+      state.id,
+      state.name,
+      ...(state.names ?? []),
+      state.role,
+      state.type,
+      state.unit,
+      state.room,
+      ...(state.rooms ?? []),
+      state.function,
+      ...(state.functions ?? []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return !normalized || text.includes(normalized);
+  });
+}
 
 function sendTo<T>(command: string, payload: unknown, traceId = command): Promise<T | undefined> {
   return sendIoBrokerCommand<T>(ADAPTER_NAME, command, addDebugTrace(payload, traceId), {
@@ -518,32 +542,57 @@ function createDemoStates(): StateOption[] {
     {
       id: "alias.0.living.light",
       name: "Living Light",
+      names: ["Living Light", "Wohnzimmerlicht"],
+      parentId: "alias.0.living",
       type: "boolean",
       role: "switch.light",
       read: true,
       write: true,
+      room: "Living room",
+      function: "Lighting",
+      alias: true,
+      aliasTarget: "zigbee.0.living.light.state",
+      value: false,
+      ack: true,
+      q: 0,
+      ts: Date.now(),
+      lc: Date.now(),
+      missing: false,
     },
     {
       id: "alias.0.living.temperature",
       name: "Living Temperature",
+      parentId: "alias.0.living",
       type: "number",
       role: "value.temperature",
       unit: "C",
       read: true,
       write: false,
+      room: "Living room",
+      function: "Climate",
+      value: 21.4,
+      ack: true,
+      q: 0,
+      ts: Date.now(),
+      lc: Date.now(),
+      missing: false,
     },
     {
       id: "alias.0.living.humidity",
       name: "Living Humidity",
+      parentId: "alias.0.living",
       type: "number",
       role: "value.humidity",
       unit: "%",
       read: true,
       write: false,
+      room: "Living room",
+      function: "Climate",
     },
     {
       id: "alias.0.scene.evening",
       name: "Evening Scene",
+      parentId: "alias.0.scene",
       type: "boolean",
       role: "button",
       read: true,
@@ -552,6 +601,7 @@ function createDemoStates(): StateOption[] {
     {
       id: "alias.0.energy.consumption",
       name: "Power Consumption",
+      parentId: "alias.0.energy",
       type: "number",
       role: "value.power",
       unit: "W",

@@ -100,6 +100,7 @@ code.
 - Migration pipeline.
 - Safe formula evaluator.
 - Action engine.
+- Metadata-based device mapping shared by the State Picker and Editor store.
 - Theme presets.
 - Component catalog metadata.
 

@@ -1,5 +1,6 @@
 export * from "./actions/action-engine";
 export * from "./components/catalog";
+export * from "./devices/device-mapping";
 export * from "./formulas/evaluator";
 export * from "./schema/defaults";
 export * from "./schema/dashboard-id";

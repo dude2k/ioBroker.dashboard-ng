@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { DashboardProject } from "@dashboard-ng/shared";
 import {
   clampGridPlacement,
+  collectPageStateIds,
   DashboardRuntimeCard,
   getGridBottom,
   isComponentVisible,
@@ -10,6 +11,7 @@ import {
   resolveComponentPlacement,
   runtimeCellSize,
   runtimeColumns,
+  subscribeIoBrokerStates,
   type RuntimeStateValues,
 } from "@dashboard-ng/runtime";
 import { viewerClient } from "./lib/client";
@@ -56,16 +58,10 @@ export function ViewerApp() {
   const gridHeight = Math.max(cell * 8, (gridBottom + 1) * cell);
 
   const stateIds = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          (project?.bindings ?? [])
-            .map((binding) => binding.stateId)
-            .filter((id): id is string => Boolean(id)),
-        ),
-      ),
-    [project?.bindings],
+    () => (project && page ? collectPageStateIds(project, page.pageId) : []),
+    [page?.pageId, project],
   );
+  const stateKey = stateIds.join("\n");
 
   useEffect(() => {
     viewerClient
@@ -90,32 +86,62 @@ export function ViewerApp() {
 
   useEffect(() => {
     let active = true;
-    const tick = async () => {
-      if (!stateIds.length) {
+    let subscription: Awaited<ReturnType<typeof subscribeIoBrokerStates>>;
+    let pollInterval: number | undefined;
+    const ids = stateKey ? stateKey.split("\n") : [];
+    const applySnapshots = (snapshots: Awaited<ReturnType<typeof viewerClient.readStates>>) => {
+      if (!active) {
         return;
       }
-      try {
-        const snapshots = await viewerClient.readStates(stateIds);
-        if (!active) {
-          return;
-        }
-        const nextValues: RuntimeStateValues = {};
+      setStateValues((current) => {
+        const nextValues = { ...current };
         snapshots.forEach((snapshot) => {
           nextValues[snapshot.id] = snapshot;
         });
-        setStateValues(nextValues);
-        setOnline(true);
+        return nextValues;
+      });
+      setOnline(true);
+    };
+    const tick = async () => {
+      if (!ids.length) {
+        return;
+      }
+      try {
+        applySnapshots(await viewerClient.readStates(ids));
       } catch {
-        setOnline(false);
+        if (active) {
+          setOnline(false);
+        }
       }
     };
-    void tick();
-    const interval = window.setInterval(() => void tick(), 2500);
+    const start = async () => {
+      if (!ids.length) {
+        return;
+      }
+      subscription = await subscribeIoBrokerStates(ids, applySnapshots, {
+        traceId: "viewer-live-states",
+        onConnectionChange: (connected) => active && setOnline(connected),
+      });
+      if (!active) {
+        subscription?.close();
+        return;
+      }
+      if (!subscription) {
+        await tick();
+        if (active) {
+          pollInterval = window.setInterval(() => void tick(), 2500);
+        }
+      }
+    };
+    void start();
     return () => {
       active = false;
-      window.clearInterval(interval);
+      subscription?.close();
+      if (pollInterval !== undefined) {
+        window.clearInterval(pollInterval);
+      }
     };
-  }, [stateIds]);
+  }, [stateKey]);
 
   useEffect(() => {
     if (!project?.settings.burnInProtection) {

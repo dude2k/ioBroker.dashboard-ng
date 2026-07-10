@@ -227,6 +227,8 @@ Acceptance criteria:
 
 ## Work Package 4: Inspector, Bindings, Actions And Styles UI
 
+Status: completed through AP4g on 2026-07-10.
+
 Goal: expose schema capabilities through a clear, non-technical UI.
 
 Tasks:
@@ -268,6 +270,8 @@ Acceptance criteria:
 
 ## Work Package 5: State Picker And Device Mapping
 
+Status: AP5a and AP5b completed on 2026-07-10.
+
 Goal: make ioBroker state selection usable for normal users across common
 adapter ecosystems.
 
@@ -302,6 +306,9 @@ Acceptance criteria:
 - Manual corrections are possible and persist in the dashboard schema.
 
 ## Work Package 6: Live State Runtime And Reconnect
+
+Status: AP6a live subscriptions completed on 2026-07-10. AP6b reconnect,
+stale-state and performance hardening remains.
 
 Goal: replace basic polling with a robust live runtime where possible.
 

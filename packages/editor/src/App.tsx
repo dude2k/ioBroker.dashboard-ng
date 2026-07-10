@@ -20,16 +20,14 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import {
-  validateDashboardProject,
-  type DashboardProject,
-  type StatePrimitive,
-} from "@dashboard-ng/shared";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { validateDashboardProject, type DashboardProject } from "@dashboard-ng/shared";
 import {
   clearDiagnostics,
+  collectPageStateIds,
   diagnosticEventName,
   getDiagnostics,
+  subscribeIoBrokerStates,
   type DiagnosticEntry,
 } from "@dashboard-ng/runtime";
 import { Canvas } from "./components/Canvas";
@@ -79,6 +77,10 @@ export function App() {
   const hasSelection = selectedComponents.length > 0;
   const selectionLocked = selectedComponents.some(isEditorLocked);
   const selectionHidden = selectedComponents.some(isEditorHidden);
+  const stateKey = useMemo(
+    () => collectPageStateIds(project, project.settings.activePageId).join("\n"),
+    [project],
+  );
 
   useEffect(() => {
     dashboardClient
@@ -96,35 +98,58 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    const tick = async () => {
-      const stateIds = Array.from(
-        new Set(
-          project.bindings
-            .map((binding) => binding.stateId)
-            .filter((id): id is string => Boolean(id)),
-        ),
-      );
-      if (!stateIds.length) {
-        return;
-      }
-      const snapshots = await dashboardClient.readStates(stateIds);
+    let subscription: Awaited<ReturnType<typeof subscribeIoBrokerStates>>;
+    let pollInterval: number | undefined;
+    const stateIds = stateKey ? stateKey.split("\n") : [];
+    const applySnapshots = (snapshots: Awaited<ReturnType<typeof dashboardClient.readStates>>) => {
       if (!active) {
         return;
       }
-      const values: Record<string, StatePrimitive> = {};
+      const values = { ...useEditorStore.getState().stateValues };
       snapshots.forEach((snapshot) => {
         values[snapshot.id] = snapshot.value;
       });
       setStateValues(values);
     };
-
-    void tick();
-    const interval = window.setInterval(() => void tick(), 3000);
+    const tick = async () => {
+      if (!stateIds.length) {
+        return;
+      }
+      try {
+        applySnapshots(await dashboardClient.readStates(stateIds));
+      } catch (error) {
+        if (active) {
+          setStatus(`State refresh failed: ${readErrorMessage(error)}`);
+        }
+      }
+    };
+    const start = async () => {
+      if (!stateIds.length) {
+        return;
+      }
+      subscription = await subscribeIoBrokerStates(stateIds, applySnapshots, {
+        traceId: "editor-live-states",
+      });
+      if (!active) {
+        subscription?.close();
+        return;
+      }
+      if (!subscription) {
+        await tick();
+        if (active) {
+          pollInterval = window.setInterval(() => void tick(), 3000);
+        }
+      }
+    };
+    void start();
     return () => {
       active = false;
-      window.clearInterval(interval);
+      subscription?.close();
+      if (pollInterval !== undefined) {
+        window.clearInterval(pollInterval);
+      }
     };
-  }, [project.bindings, setStateValues]);
+  }, [setStateValues, setStatus, stateKey]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

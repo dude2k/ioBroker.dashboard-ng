@@ -4,7 +4,7 @@ import {
   validateDashboardProject,
   type Binding,
 } from "@dashboard-ng/shared";
-import { resolveTargetState } from "../packages/runtime/src/state";
+import { getBindingDisplayUnit, resolveTargetState } from "../packages/runtime/src/state";
 import { getComponentBinding, useEditorStore } from "../packages/editor/src/store/editorStore";
 
 describe("formula bindings", () => {
@@ -76,5 +76,24 @@ describe("formula bindings", () => {
     expect(resolved.value).toBeUndefined();
     expect(resolved.error).toContain("Division by zero");
     expect(resolved.writable).toBe(false);
+  });
+
+  it("applies value transforms and display formats", () => {
+    const binding: Binding = {
+      bindingId: "bind-transform",
+      componentId: "cmp-energy",
+      target: "value",
+      kind: "state",
+      mode: "read",
+      stateId: "alias.0.energy",
+      transform: { formula: "value / 1000", format: "energy", decimals: 2 },
+      missing: false,
+    };
+
+    const resolved = resolveTargetState([binding], { "alias.0.energy": 2155 });
+
+    expect(resolved.value).toBe(2.16);
+    expect(getBindingDisplayUnit(resolved.binding)).toBe("kWh");
+    expect(resolved.error).toBeUndefined();
   });
 });

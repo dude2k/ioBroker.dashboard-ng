@@ -42,15 +42,30 @@ export function resolveTargetState(
 
   const raw = values?.[binding.stateId];
   const resolved = resolveRuntimeState(raw);
-  return {
-    ...resolved,
-    empty: false,
-    readable: binding.mode === "read" || binding.mode === "readwrite",
-    writable: binding.mode === "write" || binding.mode === "readwrite",
-    stateId: binding.stateId,
-    binding,
-    missing: binding.missing || resolved.missing,
-  };
+  try {
+    return {
+      ...resolved,
+      value: applyBindingTransform(binding, resolved.value, values),
+      empty: false,
+      readable: binding.mode === "read" || binding.mode === "readwrite",
+      writable: binding.mode === "write" || binding.mode === "readwrite",
+      stateId: binding.stateId,
+      binding,
+      missing: binding.missing || resolved.missing,
+    };
+  } catch (error) {
+    return {
+      ...resolved,
+      value: undefined,
+      empty: false,
+      error: error instanceof Error ? error.message : String(error),
+      readable: binding.mode === "read" || binding.mode === "readwrite",
+      writable: binding.mode === "write" || binding.mode === "readwrite",
+      stateId: binding.stateId,
+      binding,
+      missing: binding.missing || resolved.missing,
+    };
+  }
 }
 
 function resolveFormulaBinding(
@@ -73,7 +88,11 @@ function resolveFormulaBinding(
 
   try {
     return {
-      value: evaluateFormula(binding.formula ?? "0", buildFormulaContext(values, binding)),
+      value: applyBindingTransform(
+        binding,
+        evaluateFormula(binding.formula ?? "0", buildFormulaContext(values, binding)),
+        values,
+      ),
       empty: false,
       missing: Boolean(binding.missing || source?.missing),
       loading: false,
@@ -137,18 +156,72 @@ export function readPrimitiveState(input: RuntimeStateInput): StatePrimitive | u
 
 export function formatRuntimeValue(
   value: StatePrimitive | undefined,
-  options: { unit?: string | undefined; decimals?: number | undefined; fallback?: string } = {},
+  options: {
+    unit?: string | undefined;
+    decimals?: number | undefined;
+    fallback?: string;
+    binding?: Binding | undefined;
+  } = {},
 ): string {
   if (value === undefined || value === null || value === "") {
     return options.fallback ?? "--";
   }
 
   if (typeof value === "number") {
-    const decimals = options.decimals ?? (Math.abs(value) >= 100 ? 0 : 1);
-    return `${value.toFixed(decimals)}${options.unit ? ` ${options.unit}` : ""}`;
+    const decimals =
+      options.decimals ?? options.binding?.transform?.decimals ?? (Math.abs(value) >= 100 ? 0 : 1);
+    const unit = options.unit ?? getBindingDisplayUnit(options.binding);
+    return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
   }
 
   return `${String(value)}${options.unit ? ` ${options.unit}` : ""}`;
+}
+
+export function getBindingDisplayUnit(binding: Binding | undefined): string | undefined {
+  switch (binding?.transform?.format) {
+    case "percent":
+      return "%";
+    case "temperature":
+      return "C";
+    case "power":
+      return "W";
+    case "energy":
+      return "kWh";
+    default:
+      return undefined;
+  }
+}
+
+function applyBindingTransform(
+  binding: Binding,
+  input: StatePrimitive | undefined,
+  values: RuntimeStateValues | undefined,
+): StatePrimitive | undefined {
+  if (input === undefined || input === null || input === "") {
+    return input;
+  }
+
+  let value: StatePrimitive = input;
+  if (binding.transform?.formula) {
+    value = evaluateFormula(binding.transform.formula, {
+      ...buildFormulaContext(values, binding),
+      value,
+    });
+  }
+
+  if (binding.transform?.format && binding.transform.format !== "raw") {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      throw new Error(`Cannot format "${String(value)}" as a number.`);
+    }
+    value = numeric;
+  }
+
+  if (typeof value === "number" && binding.transform?.decimals !== undefined) {
+    const factor = 10 ** binding.transform.decimals;
+    value = Math.round((value + Number.EPSILON) * factor) / factor;
+  }
+  return value;
 }
 
 function isSnapshot(input: RuntimeStateInput): input is StateSnapshot {

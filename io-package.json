@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "news": {
+      "0.5.0": {
+        "en": "Completed advanced inspector controls, object-tree state picker, device mapping and active-page live state subscriptions.",
+        "de": "Erweiterte Inspector-Steuerung, Objektbaum-State-Picker, Geraetezuordnung und Live-State-Abos pro aktiver Seite ergaenzt.",
+        "ru": "Dobavleny rasshirennye nastroiki inspektora, derevo sostoyaniy, sopostavlenie ustroystv i live-podpiski aktivnoy stranitsy.",
+        "pt": "Adicionados controles avancados do inspetor, arvore de estados, mapeamento de dispositivos e assinaturas live da pagina ativa.",
+        "nl": "Geavanceerde inspectorbediening, statusboom, apparaattoewijzing en live statusabonnementen per actieve pagina toegevoegd.",
+        "fr": "Ajout des controles avances, de l'arbre d'etats, du mapping d'appareils et des abonnements live de la page active.",
+        "it": "Aggiunti controlli avanzati, albero degli stati, mapping dispositivi e sottoscrizioni live della pagina attiva.",
+        "es": "Agregados controles avanzados, arbol de estados, mapeo de dispositivos y suscripciones live de la pagina activa.",
+        "pl": "Dodano zaawansowane sterowanie, drzewo stanow, mapowanie urzadzen i subskrypcje live aktywnej strony.",
+        "uk": "Dodano rozshyreni nalashtuvannya, derevo staniv, mapuvannya prystroyiv i live-pidpysky aktyvnoyi storinky.",
+        "zh-cn": "Completed advanced inspector controls, object-tree state picker, device mapping and active-page live state subscriptions."
+      },
       "0.4.0": {
         "en": "Added the AP4 inspector block with target bindings, actions, visibility, conditional styles and prepared formula bindings.",
         "de": "AP4-Inspector-Block mit Ziel-Bindings, Aktionen, Sichtbarkeit, bedingten Styles und vorbereiteten Formel-Bindings ergaenzt.",
@@ -249,19 +262,6 @@
         "pl": "Dodano redirect zgodnosci dla starego URL /adapter/dashboard-ng/index.html.",
         "uk": "Dodano redirect sumisnosti dlya starogo URL /adapter/dashboard-ng/index.html.",
         "zh-cn": "Compatibility redirect added for the old /adapter/dashboard-ng/index.html URL."
-      },
-      "0.2.1": {
-        "en": "Corrected the Viewer web link so ioBroker web opens the dashboard-ng file namespace.",
-        "de": "Viewer-Web-Link korrigiert, damit ioBroker web den dashboard-ng-Dateibereich oeffnet.",
-        "ru": "Ispravlena ssylka Viewer web dlya otkrytiya file namespace dashboard-ng v ioBroker web.",
-        "pt": "Link web do Viewer corrigido para abrir o namespace de arquivos dashboard-ng no ioBroker web.",
-        "nl": "Viewer-weblink gecorrigeerd zodat ioBroker web de dashboard-ng bestandsruimte opent.",
-        "fr": "Lien web du Viewer corrige pour ouvrir l'espace fichiers dashboard-ng dans ioBroker web.",
-        "it": "Link web del Viewer corretto per aprire lo spazio file dashboard-ng in ioBroker web.",
-        "es": "Enlace web del Viewer corregido para abrir el espacio de archivos dashboard-ng en ioBroker web.",
-        "pl": "Poprawiono link web Viewera, aby ioBroker web otwieral przestrzen plikow dashboard-ng.",
-        "uk": "Vypravleno web-posylannya Viewer dlya vidkryttya file namespace dashboard-ng v ioBroker web.",
-        "zh-cn": "Viewer web link corrected to open the dashboard-ng file namespace in ioBroker web."
       }
     },
     "titleLang": {

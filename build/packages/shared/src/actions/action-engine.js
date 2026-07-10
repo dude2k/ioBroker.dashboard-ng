@@ -14,6 +14,9 @@ async function runDashboardAction(action, runtime) {
 async function evaluateCondition(condition, runtime) {
     if (condition.kind === "formula") {
         const context = {};
+        if (condition.stateId) {
+            context.value = await runtime.getState(condition.stateId);
+        }
         return Boolean((0, evaluator_1.evaluateFormula)(condition.formula ?? "false", context));
     }
     if (!condition.stateId) {

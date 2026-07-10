@@ -5,6 +5,7 @@ import { RuntimeIcon } from "./icons";
 import { resolveConditionalStyleClass } from "./conditionalStyles";
 import {
   formatRuntimeValue,
+  getBindingDisplayUnit,
   getBindingForTarget,
   readPrimitiveState,
   resolveTargetState,
@@ -121,6 +122,7 @@ function renderCard(context: CardContext) {
 
 function LightCard({ context }: { context: CardContext }) {
   const value = resolveTargetState(context.bindings, context.stateValues);
+  const brightness = resolveTargetState(context.bindings, context.stateValues, "brightness");
   const active = Boolean(value.value);
   return (
     <CardShell
@@ -142,14 +144,20 @@ function LightCard({ context }: { context: CardContext }) {
         subtitle={cardSubtitle(context, value)}
       />
       <RuntimeValue value={value.empty ? "Bind" : active ? "On" : "Off"} />
+      {!brightness.empty && !brightness.loading && !brightness.missing ? (
+        <RuntimeText muted>
+          Brightness{" "}
+          {formatRuntimeValue(brightness.value, { unit: "%", binding: brightness.binding })}
+        </RuntimeText>
+      ) : null}
     </CardShell>
   );
 }
 
 function SensorCard({ context }: { context: CardContext }) {
   const value = resolveTargetState(context.bindings, context.stateValues);
-  const unit = propString(context, "unit");
-  const decimals = propNumber(context, "precision");
+  const unit = propString(context, "unit") || getBindingDisplayUnit(value.binding);
+  const decimals = propNumber(context, "precision") ?? value.binding?.transform?.decimals;
   return (
     <CardShell context={context} status={statusLabel(value, context)} tone="sensor">
       <CardTop
@@ -158,7 +166,10 @@ function SensorCard({ context }: { context: CardContext }) {
         subtitle={cardSubtitle(context, value)}
       />
       <RuntimeValue
-        value={formatRuntimeValue(value.value, { decimals, fallback: valueFallback(value) })}
+        value={formatRuntimeValue(value.value, {
+          decimals,
+          fallback: valueFallback(value),
+        })}
         unit={unit || undefined}
       />
     </CardShell>
@@ -194,7 +205,9 @@ function RoomCard({ context }: { context: CardContext }) {
     <CardShell context={context} status={statusLabel(value, context)} tone="room">
       <CardTop icon="House" title={cardTitle(context)} subtitle={cardSubtitle(context, value)} />
       <div className="dng-runtime-chip-row">
-        <span>{formatRuntimeValue(value.value, { fallback: "Ready" })}</span>
+        <span>
+          {formatRuntimeValue(value.value, { fallback: "Ready", binding: value.binding })}
+        </span>
         <span>{propString(context, "zone") || "Room"}</span>
       </div>
     </CardShell>
@@ -203,13 +216,23 @@ function RoomCard({ context }: { context: CardContext }) {
 
 function ThermostatCard({ context }: { context: CardContext }) {
   const value = resolveTargetState(context.bindings, context.stateValues);
-  const unit = propString(context, "unit") || "C";
-  const target = propString(context, "target") || "--";
+  const targetValue = resolveTargetState(context.bindings, context.stateValues, "target");
+  const unit = propString(context, "unit") || getBindingDisplayUnit(value.binding) || "C";
+  const decimals = value.binding?.transform?.decimals;
+  const target = targetValue.empty
+    ? propString(context, "target") || "--"
+    : formatRuntimeValue(targetValue.value, {
+        decimals: targetValue.binding?.transform?.decimals,
+        fallback: "--",
+      });
   return (
     <CardShell context={context} status={statusLabel(value, context)} tone="thermostat">
       <CardTop icon="Gauge" title={cardTitle(context)} subtitle={cardSubtitle(context, value)} />
       <RuntimeValue
-        value={formatRuntimeValue(value.value, { fallback: valueFallback(value) })}
+        value={formatRuntimeValue(value.value, {
+          decimals,
+          fallback: valueFallback(value),
+        })}
         unit={unit}
       />
       <RuntimeText muted>Target {target}</RuntimeText>
@@ -237,12 +260,16 @@ function BlindCard({ context }: { context: CardContext }) {
 
 function EnergyCard({ context }: { context: CardContext }) {
   const value = resolveTargetState(context.bindings, context.stateValues);
-  const unit = propString(context, "unit") || "W";
+  const unit = propString(context, "unit") || getBindingDisplayUnit(value.binding) || "W";
+  const decimals = value.binding?.transform?.decimals;
   return (
     <CardShell context={context} status={statusLabel(value, context)} tone="energy">
       <CardTop icon="Zap" title={cardTitle(context)} subtitle={cardSubtitle(context, value)} />
       <RuntimeValue
-        value={formatRuntimeValue(value.value, { fallback: valueFallback(value) })}
+        value={formatRuntimeValue(value.value, {
+          decimals,
+          fallback: valueFallback(value),
+        })}
         unit={unit}
       />
       <RuntimeText muted>{propString(context, "period") || "Current"}</RuntimeText>
@@ -320,10 +347,18 @@ function ButtonCard({ context }: { context: CardContext }) {
 
 function ValueDisplayCard({ context }: { context: CardContext }) {
   const value = resolveTargetState(context.bindings, context.stateValues);
+  const unit = propString(context, "unit") || getBindingDisplayUnit(value.binding);
+  const decimals = propNumber(context, "precision") ?? value.binding?.transform?.decimals;
   return (
     <CardShell context={context} status={statusLabel(value, context)} tone="sensor">
       <CardTop icon="Activity" title={cardTitle(context)} subtitle={cardSubtitle(context, value)} />
-      <RuntimeValue value={formatRuntimeValue(value.value, { fallback: valueFallback(value) })} />
+      <RuntimeValue
+        value={formatRuntimeValue(value.value, {
+          decimals,
+          fallback: valueFallback(value),
+        })}
+        unit={unit}
+      />
     </CardShell>
   );
 }
@@ -350,7 +385,8 @@ function CardShell({
   onLongPress,
 }: CardShellProps) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const longPressFired = useRef(false);
+  const gestureFired = useRef(false);
+  const swipeStart = useRef<{ x: number; y: number } | undefined>(undefined);
   const stateClass = [
     active ? "is-active" : "",
     context.pending ? "is-pending" : "",
@@ -370,7 +406,7 @@ function CardShell({
     </>
   );
 
-  if (interactive) {
+  if (interactive || context.actions.length > 0) {
     const clearLongPress = () => {
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
@@ -384,22 +420,46 @@ function CardShell({
         disabled={context.disabled}
         type="button"
         onPointerDown={(event) => {
-          if (!onLongPress) {
+          gestureFired.current = false;
+          swipeStart.current = { x: event.clientX, y: event.clientY };
+          clearLongPress();
+          if (onLongPress) {
+            longPressTimer.current = setTimeout(() => {
+              gestureFired.current = true;
+              swipeStart.current = undefined;
+              void onLongPress(event);
+            }, 650);
+          }
+        }}
+        onPointerMove={(event) => {
+          const start = swipeStart.current;
+          if (!start || !hasActionTrigger(context, "swipe")) {
             return;
           }
-          longPressFired.current = false;
-          clearLongPress();
-          longPressTimer.current = setTimeout(() => {
-            longPressFired.current = true;
-            void onLongPress(event);
-          }, 650);
+          const deltaX = event.clientX - start.x;
+          const deltaY = event.clientY - start.y;
+          if (Math.abs(deltaX) >= 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25) {
+            gestureFired.current = true;
+            swipeStart.current = undefined;
+            clearLongPress();
+            void context.runAction("swipe", event);
+          }
         }}
-        onPointerLeave={clearLongPress}
-        onPointerCancel={clearLongPress}
-        onPointerUp={clearLongPress}
+        onPointerLeave={() => {
+          swipeStart.current = undefined;
+          clearLongPress();
+        }}
+        onPointerCancel={() => {
+          swipeStart.current = undefined;
+          clearLongPress();
+        }}
+        onPointerUp={() => {
+          swipeStart.current = undefined;
+          clearLongPress();
+        }}
         onClick={(event) => {
-          if (longPressFired.current) {
-            longPressFired.current = false;
+          if (gestureFired.current) {
+            gestureFired.current = false;
             event.stopPropagation();
             return;
           }
@@ -479,7 +539,10 @@ async function runComponentAction(
 
 function isInteractive(context: CardContext, value: RuntimeTargetState): boolean {
   return (
-    hasActionTrigger(context, "tap") || hasActionTrigger(context, "longPress") || value.writable
+    hasActionTrigger(context, "tap") ||
+    hasActionTrigger(context, "longPress") ||
+    hasActionTrigger(context, "swipe") ||
+    value.writable
   );
 }
 

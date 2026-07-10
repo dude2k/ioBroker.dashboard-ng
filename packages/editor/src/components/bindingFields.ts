@@ -21,6 +21,13 @@ export const bindingTargetsByType: Record<ComponentType, InspectorBindingTarget[
       defaultMode: "readwrite",
       modes: readWriteModes,
     },
+    {
+      target: "brightness",
+      label: "Brightness",
+      description: "Optional dimmer level for detected lights.",
+      defaultMode: "readwrite",
+      modes: readWriteModes,
+    },
   ],
   "sensor-card": [
     {
@@ -57,6 +64,13 @@ export const bindingTargetsByType: Record<ComponentType, InspectorBindingTarget[
       defaultMode: "read",
       modes: readModes,
     },
+    {
+      target: "target",
+      label: "Target temperature",
+      description: "Reads or writes the thermostat setpoint.",
+      defaultMode: "readwrite",
+      modes: readWriteModes,
+    },
   ],
   "blind-card": [
     {
@@ -65,6 +79,27 @@ export const bindingTargetsByType: Record<ComponentType, InspectorBindingTarget[
       description: "Reads or writes the blind position.",
       defaultMode: "readwrite",
       modes: readWriteModes,
+    },
+    {
+      target: "open",
+      label: "Open command",
+      description: "Optional writable state for opening the blind.",
+      defaultMode: "write",
+      modes: writeModes,
+    },
+    {
+      target: "close",
+      label: "Close command",
+      description: "Optional writable state for closing the blind.",
+      defaultMode: "write",
+      modes: writeModes,
+    },
+    {
+      target: "stop",
+      label: "Stop command",
+      description: "Optional writable state for stopping the blind.",
+      defaultMode: "write",
+      modes: writeModes,
     },
   ],
   "energy-card": [

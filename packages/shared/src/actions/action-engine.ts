@@ -28,6 +28,9 @@ async function evaluateCondition(
 ): Promise<boolean> {
   if (condition.kind === "formula") {
     const context: FormulaContext = {};
+    if (condition.stateId) {
+      context.value = await runtime.getState(condition.stateId);
+    }
     return Boolean(evaluateFormula(condition.formula ?? "false", context));
   }
 

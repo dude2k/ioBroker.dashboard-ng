@@ -4,7 +4,7 @@ Modern responsive dashboards for ioBroker.
 
 ## Project Status
 
-**Dashboard-NG is not finished yet.** Version `0.4.0` is an installable alpha
+**Dashboard-NG is not finished yet.** Version `0.5.0` is an installable alpha
 baseline for early testing and development. The adapter can be installed from
 GitHub and an instance can run, but the complete MVP feature set from
 `docs/MVP_COMPLETION_TASK.md` is still in progress.
@@ -14,8 +14,8 @@ changes and possible breaking changes before a stable `1.0.0` release.
 
 ## Version
 
-- Current adapter version: `0.4.0`
-- Current GitHub tag: `v0.4.0`
+- Current adapter version: `0.5.0`
+- Current GitHub tag: `v0.5.0`
 - Release status: alpha / installable MVP foundation
 - Versioning scheme: SemVer-style package versions and Git tags named
   `vX.Y.Z`
@@ -160,6 +160,24 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 `/adapter/dashboard-ng/index.html` do not end in a 404.
 
 ## Changelog
+
+### 0.5.0 (2026-07-10)
+
+- Added batched live ioBroker state subscriptions for only the active page,
+  with automatic cleanup and polling fallback when subscriptions are not
+  available.
+- Replaced the flat State Picker with a searchable ioBroker object tree showing
+  access rights, roles, units, ranges, aliases, rooms/functions and quality
+  metadata.
+- Added metadata-based device detection for lights, thermostats, blinds,
+  sensors, scenes, energy meters and cameras, including related-state binding
+  suggestions that preserve manual corrections.
+- Completed AP4 inspector controls with value transforms, action conditions,
+  ordered else steps and optional horizontal swipe actions.
+- Added Advanced Mode so conditional visibility, styles, transforms and action
+  branching stay out of the default editing workflow.
+- Applied binding transform formulas, numeric formats, decimals and display
+  units consistently in the shared Editor/Viewer runtime.
 
 ### 0.4.0 (2026-07-03)
 
@@ -333,9 +351,10 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 
 ## Known MVP Limits
 
-- All MVP cards render, but advanced per-card inspector controls are still
-  basic.
-- Device detection is intentionally basic.
+- All MVP cards render and expose the AP4 inspector controls; additional
+  specialist controls remain planned for individual card types.
+- Device detection is heuristic and needs broader testing across real-world
+  adapter ecosystems.
 - Asset upload is prepared in the schema but not fully implemented.
 - No plugin system, marketplace or VIS/VIS2 import.
 - No arbitrary JavaScript and no complex automation workflows.
@@ -347,7 +366,7 @@ Dashboards. Nutzer sollen ohne HTML, CSS oder JavaScript schoene Dashboards
 erstellen koennen. Der MVP konzentriert sich auf Editor, Viewer, Grid-Layout,
 State-Binding, sichere Formeln, Import/Export, Themes und stabile Migrationen.
 
-Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.4.0` ist eine
+Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.5.0` ist eine
 installierbare Alpha-Grundlage fuer Tests und Weiterentwicklung, aber noch keine
 stabile Produktivversion.
 
