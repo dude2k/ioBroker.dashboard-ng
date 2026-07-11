@@ -4,6 +4,8 @@ import type {
   StatePrimitive,
   StateSnapshot,
 } from "@dashboard-ng/shared";
+import { getFormulaStateIds } from "@dashboard-ng/shared";
+import { getConditionalStyleRule } from "./conditionalStyles";
 import { appendDiagnostic } from "./diagnostics";
 import { resolveIoBrokerSocket } from "./iobrokerSocket";
 
@@ -18,17 +20,23 @@ export interface LiveStateSubscriptionOptions {
 }
 
 export function collectPageStateIds(project: DashboardProject, pageId: string): string[] {
-  const componentIds = new Set(
-    project.components
-      .filter((component) => component.pageId === pageId)
-      .map((component) => component.componentId),
-  );
+  const components = project.components.filter((component) => component.pageId === pageId);
+  const componentIds = new Set(components.map((component) => component.componentId));
   const stateIds = new Set<string>();
 
   project.bindings.forEach((binding) => {
-    if (componentIds.has(binding.componentId) && binding.stateId) {
+    if (!componentIds.has(binding.componentId)) {
+      return;
+    }
+    if (binding.stateId) {
       stateIds.add(binding.stateId);
     }
+    addFormulaStates(binding.formula, stateIds);
+    addFormulaStates(binding.transform?.formula, stateIds);
+  });
+  components.forEach((component) => {
+    addFormulaStates(component.visibility.formula, stateIds);
+    addFormulaStates(getConditionalStyleRule(component)?.formula, stateIds);
   });
   project.actions.forEach((action) => {
     if (!componentIds.has(action.componentId)) {
@@ -37,6 +45,7 @@ export function collectPageStateIds(project: DashboardProject, pageId: string): 
     if (action.condition?.stateId) {
       stateIds.add(action.condition.stateId);
     }
+    addFormulaStates(action.condition?.formula, stateIds);
     [...action.steps, ...(action.elseSteps ?? [])].forEach((step) =>
       addActionState(step, stateIds),
     );
@@ -164,5 +173,16 @@ function toSnapshot(id: string, state: IoBrokerStateValue | null | undefined): S
 function addActionState(step: ActionStep, stateIds: Set<string>): void {
   if ("stateId" in step && step.stateId) {
     stateIds.add(step.stateId);
+  }
+}
+
+function addFormulaStates(formula: string | undefined, stateIds: Set<string>): void {
+  if (!formula?.trim()) {
+    return;
+  }
+  try {
+    getFormulaStateIds(formula).forEach((stateId) => stateIds.add(stateId));
+  } catch {
+    // Invalid formulas are reported by the Editor and ignored for subscriptions.
   }
 }

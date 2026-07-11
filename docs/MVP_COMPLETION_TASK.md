@@ -307,8 +307,7 @@ Acceptance criteria:
 
 ## Work Package 6: Live State Runtime And Reconnect
 
-Status: AP6a live subscriptions completed on 2026-07-10. AP6b reconnect,
-stale-state and performance hardening remains.
+Status: completed through AP6b on 2026-07-11.
 
 Goal: replace basic polling with a robust live runtime where possible.
 
@@ -333,6 +332,8 @@ Acceptance criteria:
 - Large dashboards do not subscribe to unrelated states.
 
 ## Work Package 7: Formula And Calculated Value UX
+
+Status: completed on 2026-07-11.
 
 Goal: make formulas useful without exposing arbitrary JavaScript.
 
@@ -443,6 +444,8 @@ Acceptance criteria:
 - The dashboard remains readable during burn-in movement or dimming.
 
 ## Work Package 11: Schema, Migrations And Storage Safety
+
+Status: completed on 2026-07-11.
 
 Goal: keep long-term dashboard compatibility reliable.
 

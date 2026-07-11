@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDefaultDashboard } from "@dashboard-ng/shared";
 import {
   collectPageStateIds,
+  mergeRuntimeStateValues,
   subscribeIoBrokerStates,
   type IoBrokerSocketLike,
 } from "@dashboard-ng/runtime";
@@ -22,6 +23,26 @@ describe("live state runtime", () => {
     project.actions[0]!.elseSteps = [
       { kind: "setState", stateId: "alias.0.living.fallback", value: false },
     ];
+    project.bindings[1]!.kind = "formula";
+    project.bindings[1]!.formula =
+      'state("alias.0.living.temperature") + state("alias.0.outside.temperature")';
+    project.bindings[1]!.transform = {
+      formula: 'value + state("alias.0.temperature.offset")',
+    };
+    project.components[1]!.visibility = {
+      kind: "formula",
+      formula: 'state("alias.0.living.enabled") == true',
+    };
+    project.components[1]!.style.conditional = {
+      enabled: true,
+      tone: "warning",
+      operator: "formula",
+      formula: 'state("alias.0.living.humidity") > 70',
+    };
+    project.actions[0]!.condition = {
+      kind: "formula",
+      formula: 'state("alias.0.tariff.cheap") == true',
+    };
     project.pages.push({
       pageId: "page-other",
       name: "Other",
@@ -49,9 +70,13 @@ describe("live state runtime", () => {
     expect(collectPageStateIds(project, "page-home")).toEqual([
       "alias.0.living.enabled",
       "alias.0.living.fallback",
+      "alias.0.living.humidity",
       "alias.0.living.light",
       "alias.0.living.temperature",
+      "alias.0.outside.temperature",
       "alias.0.scene.evening",
+      "alias.0.tariff.cheap",
+      "alias.0.temperature.offset",
     ]);
     expect(collectPageStateIds(project, "page-home")).not.toContain("alias.0.other.value");
   });
@@ -102,6 +127,45 @@ describe("live state runtime", () => {
       expect.any(Function),
     );
     expect(socket.unregisterConnectionHandler).toHaveBeenCalledWith(connectionHandler);
+  });
+
+  it("keeps the current state object when a batch has no changes", () => {
+    const current = {
+      "state.temperature": {
+        id: "state.temperature",
+        value: 21.5,
+        ack: true,
+        ts: 100,
+        lc: 100,
+        missing: false,
+      },
+    };
+
+    expect(
+      mergeRuntimeStateValues(current, {
+        "state.temperature": {
+          id: "state.temperature",
+          value: 21.5,
+          ack: true,
+          ts: 101,
+          lc: 101,
+          missing: false,
+        },
+      }),
+    ).toBe(current);
+
+    const updated = mergeRuntimeStateValues(current, {
+      "state.temperature": {
+        id: "state.temperature",
+        value: 22,
+        ack: true,
+        ts: 101,
+        lc: 101,
+        missing: false,
+      },
+    });
+    expect(updated).not.toBe(current);
+    expect(updated["state.temperature"]).toMatchObject({ value: 22 });
   });
 });
 

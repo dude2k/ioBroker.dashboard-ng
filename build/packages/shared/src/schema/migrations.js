@@ -14,11 +14,12 @@ class DashboardMigrationError extends Error {
     }
 }
 exports.DashboardMigrationError = DashboardMigrationError;
-function migrateDashboardProject(input) {
+function migrateDashboardProject(input, options = {}) {
     const backup = cloneJson(input);
     let working = cloneJson(input);
     let version = readSchemaVersion(working);
     let migrated = false;
+    const now = options.now ?? new Date().toISOString();
     if (version > types_1.CURRENT_SCHEMA_VERSION) {
         throw new DashboardMigrationError(`Dashboard schema version ${version} is newer than supported version ${types_1.CURRENT_SCHEMA_VERSION}.`);
     }
@@ -27,9 +28,15 @@ function migrateDashboardProject(input) {
     }
     while (version < types_1.CURRENT_SCHEMA_VERSION) {
         if (version === 0) {
-            working = migrate0To1(working);
+            working = migrate0To1(working, now);
             migrated = true;
             version = 1;
+            continue;
+        }
+        if (version === 1) {
+            working = migrate1To2(working, now);
+            migrated = true;
+            version = 2;
             continue;
         }
         throw new DashboardMigrationError(`No migration path from schema version ${version}.`);
@@ -45,9 +52,8 @@ function migrateDashboardProject(input) {
         validation,
     };
 }
-function migrate0To1(input) {
+function migrate0To1(input, now) {
     const record = isRecord(input) ? input : {};
-    const now = new Date().toISOString();
     const name = typeof record.name === "string" && record.name.trim() ? record.name : "My Home";
     const projectId = typeof record.projectId === "string" && record.projectId.trim() ? record.projectId : "default";
     const project = (0, defaults_1.createDefaultDashboard)({ name, projectId, now });
@@ -59,6 +65,38 @@ function migrate0To1(input) {
     };
     project.migrationHistory = [entry];
     return project;
+}
+function migrate1To2(input, now) {
+    if (!isRecord(input)) {
+        throw new DashboardMigrationError("Schema v1 dashboard must be an object.");
+    }
+    const defaults = (0, defaults_1.createDefaultDashboard)({ now });
+    const history = Array.isArray(input.migrationHistory) ? input.migrationHistory : [];
+    const settings = isRecord(input.settings) ? input.settings : {};
+    return {
+        ...input,
+        schemaVersion: 2,
+        settings: {
+            ...defaults.settings,
+            ...settings,
+            reconnectIntervalMs: typeof settings.reconnectIntervalMs === "number" && settings.reconnectIntervalMs >= 500
+                ? settings.reconnectIntervalMs
+                : defaults.settings.reconnectIntervalMs,
+        },
+        assets: Array.isArray(input.assets) ? input.assets : [],
+        templates: Array.isArray(input.templates) ? input.templates : [],
+        themes: Array.isArray(input.themes) ? input.themes : defaults.themes,
+        updatedAt: now,
+        migrationHistory: [
+            ...history,
+            {
+                fromVersion: 1,
+                toVersion: 2,
+                migratedAt: now,
+                note: "Added reconnect settings and full MVP entity validation.",
+            },
+        ],
+    };
 }
 function readSchemaVersion(value) {
     if (!isRecord(value)) {

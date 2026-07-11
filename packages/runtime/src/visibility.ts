@@ -4,7 +4,7 @@ import {
   type DashboardComponent,
   type StatePrimitive,
 } from "@dashboard-ng/shared";
-import { readPrimitiveState } from "./state";
+import { buildRuntimeFormulaContext, readPrimitiveState } from "./state";
 import type { RuntimeStateValues } from "./types";
 
 export function isComponentVisible(
@@ -32,11 +32,13 @@ export function isComponentVisible(
   if (rule.kind === "formula") {
     try {
       return Boolean(
-        evaluateFormula(rule.formula ?? "true", {
-          value,
-          expected: rule.expected,
-          ...(binding?.stateId ? { [binding.stateId]: value } : {}),
-        }),
+        evaluateFormula(
+          rule.formula ?? "true",
+          buildRuntimeFormulaContext(stateValues, {
+            value,
+            expected: rule.expected,
+          }),
+        ),
       );
     } catch {
       return true;

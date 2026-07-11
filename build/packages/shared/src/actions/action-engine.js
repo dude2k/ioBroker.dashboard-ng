@@ -17,6 +17,9 @@ async function evaluateCondition(condition, runtime) {
         if (condition.stateId) {
             context.value = await runtime.getState(condition.stateId);
         }
+        for (const stateId of (0, evaluator_1.getFormulaStateIds)(condition.formula ?? "false")) {
+            context[stateId] = await runtime.getState(stateId);
+        }
         return Boolean((0, evaluator_1.evaluateFormula)(condition.formula ?? "false", context));
     }
     if (!condition.stateId) {

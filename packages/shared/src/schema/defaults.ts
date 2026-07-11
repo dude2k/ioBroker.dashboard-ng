@@ -142,6 +142,7 @@ export function createDefaultDashboard(options: DefaultDashboardOptions = {}): D
       burnInProtection: true,
       wakeLock: true,
       advancedMode: false,
+      reconnectIntervalMs: 2500,
     },
     createdAt: now,
     updatedAt: now,

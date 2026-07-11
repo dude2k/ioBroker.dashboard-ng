@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateDashboardProject = validateDashboardProject;
 const types_1 = require("./types");
+const evaluator_1 = require("../formulas/evaluator");
+const entity_validation_1 = require("./entity-validation");
 function validateDashboardProject(project) {
     const issues = [];
     if (!isRecord(project)) {
@@ -38,12 +40,57 @@ function validateDashboardProject(project) {
         return { valid: false, issues };
     }
     const typedProject = project;
+    (0, entity_validation_1.validateDashboardEntityShapes)(project, issues);
+    if (issues.some((issue) => issue.severity === "error")) {
+        return { valid: false, issues };
+    }
     validateReferences(typedProject, issues);
     validateLayouts(typedProject, issues);
+    validateProjectFormulas(typedProject, issues);
     return {
         valid: !issues.some((issue) => issue.severity === "error"),
         issues,
     };
+}
+function validateProjectFormulas(project, issues) {
+    project.bindings.forEach((binding, index) => {
+        if (binding.kind === "formula") {
+            addFormulaIssue(binding.formula, `$.bindings[${index}].formula`, issues, true);
+        }
+        addFormulaIssue(binding.transform?.formula, `$.bindings[${index}].transform.formula`, issues);
+    });
+    project.components.forEach((component, index) => {
+        if (component.visibility.kind === "formula") {
+            addFormulaIssue(component.visibility.formula, `$.components[${index}].visibility.formula`, issues, true);
+        }
+        const conditional = isRecord(component.style.conditional)
+            ? component.style.conditional
+            : undefined;
+        if (conditional?.operator === "formula") {
+            addFormulaIssue(typeof conditional.formula === "string" ? conditional.formula : undefined, `$.components[${index}].style.conditional.formula`, issues, true);
+        }
+    });
+    project.actions.forEach((action, index) => {
+        if (action.condition?.kind === "formula") {
+            addFormulaIssue(action.condition.formula, `$.actions[${index}].condition.formula`, issues, true);
+        }
+    });
+}
+function addFormulaIssue(formula, path, issues, required = false) {
+    if (!formula?.trim()) {
+        if (required) {
+            issues.push({ path, message: "Formula is required.", severity: "error" });
+        }
+        return;
+    }
+    const validation = (0, evaluator_1.validateFormula)(formula);
+    if (!validation.valid) {
+        issues.push({
+            path,
+            message: validation.error ?? "Formula is invalid.",
+            severity: "error",
+        });
+    }
 }
 function validateReferences(project, issues) {
     const pageIds = new Set(project.pages.map((page) => page.pageId));

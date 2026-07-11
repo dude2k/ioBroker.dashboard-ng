@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "news": {
+      "0.6.0": {
+        "en": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "de": "Robuste Wiederverbindung, Multi-State-Formeln, Schema-v2-Validierung und nicht-destruktive Migrationswiederherstellung ergaenzt.",
+        "ru": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "pt": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "nl": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "fr": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "it": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "es": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "pl": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "uk": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "zh-cn": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery."
+      },
       "0.5.0": {
         "en": "Completed advanced inspector controls, object-tree state picker, device mapping and active-page live state subscriptions.",
         "de": "Erweiterte Inspector-Steuerung, Objektbaum-State-Picker, Geraetezuordnung und Live-State-Abos pro aktiver Seite ergaenzt.",
@@ -249,19 +262,6 @@
         "pl": "Zarzadzanie stronami edytora, przeciaganie z palety przyciagane do siatki oraz uchwyty przesuwania/zmiany rozmiaru.",
         "uk": "Keruvannya storinkamy redaktora, peretyaguvannya z palitry z pryvyazkoyu do sitky ta ruchky peremishchennya/rozmiru.",
         "zh-cn": "Editor pages, snapped palette drag/drop and move/resize handles for 0.3.0."
-      },
-      "0.2.2": {
-        "en": "Added a compatibility redirect for the old /adapter/dashboard-ng/index.html URL.",
-        "de": "Kompatibilitaets-Redirect fuer die alte URL /adapter/dashboard-ng/index.html hinzugefuegt.",
-        "ru": "Dobavlen redirect sovmestimosti dlya starogo URL /adapter/dashboard-ng/index.html.",
-        "pt": "Adicionado redirect de compatibilidade para a URL antiga /adapter/dashboard-ng/index.html.",
-        "nl": "Compatibiliteitsredirect toegevoegd voor de oude URL /adapter/dashboard-ng/index.html.",
-        "fr": "Redirection de compatibilite ajoutee pour l'ancienne URL /adapter/dashboard-ng/index.html.",
-        "it": "Redirect di compatibilita aggiunto per il vecchio URL /adapter/dashboard-ng/index.html.",
-        "es": "Redirect de compatibilidad agregado para la URL antigua /adapter/dashboard-ng/index.html.",
-        "pl": "Dodano redirect zgodnosci dla starego URL /adapter/dashboard-ng/index.html.",
-        "uk": "Dodano redirect sumisnosti dlya starogo URL /adapter/dashboard-ng/index.html.",
-        "zh-cn": "Compatibility redirect added for the old /adapter/dashboard-ng/index.html URL."
       }
     },
     "titleLang": {

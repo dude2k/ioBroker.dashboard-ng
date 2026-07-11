@@ -106,6 +106,7 @@ function createDefaultDashboard(options = {}) {
             burnInProtection: true,
             wakeLock: true,
             advancedMode: false,
+            reconnectIntervalMs: 2500,
         },
         createdAt: now,
         updatedAt: now,

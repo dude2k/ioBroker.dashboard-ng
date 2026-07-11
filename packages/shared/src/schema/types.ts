@@ -1,4 +1,4 @@
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export type DashboardBreakpoint = "phone" | "tablet" | "desktop" | "wall";
 export type ComponentType =
@@ -206,6 +206,7 @@ export interface ProjectSettings {
   burnInProtection: boolean;
   wakeLock: boolean;
   advancedMode: boolean;
+  reconnectIntervalMs: number;
 }
 
 export interface MigrationEntry {

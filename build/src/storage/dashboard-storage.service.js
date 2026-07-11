@@ -74,7 +74,19 @@ class DashboardStorageService {
         let backupFile;
         if (migration.migrated) {
             backupFile = await this.writeBackup(dashboardId, migration.backup, traceId);
-            await this.writeDashboardFile(dashboardId, migration.project, traceId);
+            try {
+                await this.writeDashboardFile(dashboardId, migration.project, traceId);
+                await this.verifyDashboardFile(dashboardId, migration.project, traceId);
+            }
+            catch (error) {
+                try {
+                    await this.writeDashboardJson(dashboardId, migration.backup, traceId, "restore");
+                }
+                catch (restoreError) {
+                    throw new Error(`Migration failed and original dashboard could not be restored: ${readError(error)}; restore: ${readError(restoreError)}`);
+                }
+                throw new Error(`Migration failed; original dashboard restored: ${readError(error)}`);
+            }
             this.logTrace("info", traceId, "migration saved", {
                 dashboardId,
                 schemaVersion: migration.project.schemaVersion,
@@ -145,15 +157,18 @@ class DashboardStorageService {
         return ["default"];
     }
     async writeDashboardFile(dashboardId, dashboard, traceId) {
+        await this.writeDashboardJson(dashboardId, dashboard, traceId, "write");
+    }
+    async writeDashboardJson(dashboardId, dashboard, traceId, operation) {
         const fileName = this.dashboardFileName(dashboardId);
         const serialized = `${JSON.stringify(dashboard, null, 2)}\n`;
-        this.logTrace("info", traceId, "write file start", {
+        this.logTrace("info", traceId, `${operation} file start`, {
             dashboardId,
             fileName,
             bytes: serialized.length,
         });
         await this.adapter.writeFileAsync(this.adapter.name, fileName, serialized);
-        this.logTrace("info", traceId, "write file ok", {
+        this.logTrace("info", traceId, `${operation} file ok`, {
             dashboardId,
             fileName,
             bytes: serialized.length,

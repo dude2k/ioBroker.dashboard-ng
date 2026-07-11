@@ -46,4 +46,30 @@ describe("action runtime", () => {
 
     expect(navigate).toHaveBeenCalledWith("page-2");
   });
+
+  it("loads every state referenced by a formula condition", async () => {
+    const navigate = vi.fn();
+    const getState = vi.fn(async (stateId: string) => (stateId === "sensor.inside" ? 24 : 18));
+    const action: DashboardAction = {
+      actionId: "act-multi-formula",
+      componentId: "cmp-1",
+      trigger: "tap",
+      condition: {
+        kind: "formula",
+        formula: 'state("sensor.inside") > state("sensor.outside")',
+      },
+      steps: [{ kind: "navigate", pageId: "page-warmer" }],
+    };
+
+    await runDashboardAction(action, {
+      getState,
+      setState: vi.fn(),
+      navigate,
+      openUrl: vi.fn(),
+    });
+
+    expect(getState).toHaveBeenCalledWith("sensor.inside");
+    expect(getState).toHaveBeenCalledWith("sensor.outside");
+    expect(navigate).toHaveBeenCalledWith("page-warmer");
+  });
 });

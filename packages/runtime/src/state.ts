@@ -1,6 +1,8 @@
 import {
   evaluateFormula,
+  getFormulaStateIds,
   type Binding,
+  type FormulaContext,
   type StatePrimitive,
   type StateSnapshot,
 } from "@dashboard-ng/shared";
@@ -73,34 +75,9 @@ function resolveFormulaBinding(
   values: RuntimeStateValues | undefined,
 ): RuntimeTargetState {
   const source = binding.stateId ? resolveRuntimeState(values?.[binding.stateId]) : undefined;
-  if (binding.stateId && (!source || source.loading)) {
-    return {
-      value: undefined,
-      empty: false,
-      missing: Boolean(binding.missing || source?.missing),
-      loading: true,
-      readable: true,
-      writable: false,
-      stateId: binding.stateId,
-      binding,
-    };
-  }
-
+  let formulaStateIds: string[];
   try {
-    return {
-      value: applyBindingTransform(
-        binding,
-        evaluateFormula(binding.formula ?? "0", buildFormulaContext(values, binding)),
-        values,
-      ),
-      empty: false,
-      missing: Boolean(binding.missing || source?.missing),
-      loading: false,
-      readable: true,
-      writable: false,
-      ...(binding.stateId ? { stateId: binding.stateId } : {}),
-      binding,
-    };
+    formulaStateIds = getFormulaStateIds(binding.formula ?? "0");
   } catch (error) {
     return {
       value: undefined,
@@ -114,20 +91,73 @@ function resolveFormulaBinding(
       binding,
     };
   }
+  const formulaStates = formulaStateIds.map((stateId) => resolveRuntimeState(values?.[stateId]));
+  if (
+    (binding.stateId && (!source || source.loading)) ||
+    formulaStates.some((state) => state.loading)
+  ) {
+    return {
+      value: undefined,
+      empty: false,
+      missing: Boolean(
+        binding.missing || source?.missing || formulaStates.some((state) => state.missing),
+      ),
+      loading: true,
+      readable: true,
+      writable: false,
+      ...(binding.stateId ? { stateId: binding.stateId } : {}),
+      binding,
+    };
+  }
+
+  try {
+    return {
+      value: applyBindingTransform(
+        binding,
+        evaluateFormula(
+          binding.formula ?? "0",
+          buildRuntimeFormulaContext(values, {
+            ...(binding.stateId ? { value: readPrimitiveState(values?.[binding.stateId]) } : {}),
+          }),
+        ),
+        values,
+      ),
+      empty: false,
+      missing: Boolean(
+        binding.missing || source?.missing || formulaStates.some((state) => state.missing),
+      ),
+      loading: false,
+      readable: true,
+      writable: false,
+      ...(binding.stateId ? { stateId: binding.stateId } : {}),
+      binding,
+    };
+  } catch (error) {
+    return {
+      value: undefined,
+      empty: false,
+      missing: Boolean(
+        binding.missing || source?.missing || formulaStates.some((state) => state.missing),
+      ),
+      loading: false,
+      error: error instanceof Error ? error.message : String(error),
+      readable: true,
+      writable: false,
+      ...(binding.stateId ? { stateId: binding.stateId } : {}),
+      binding,
+    };
+  }
 }
 
-function buildFormulaContext(
+export function buildRuntimeFormulaContext(
   values: RuntimeStateValues | undefined,
-  binding: Binding,
-): Record<string, StatePrimitive | undefined> {
-  const context: Record<string, StatePrimitive | undefined> = {};
+  aliases: FormulaContext = {},
+): FormulaContext {
+  const context: FormulaContext = {};
   Object.entries(values ?? {}).forEach(([stateId, input]) => {
     context[stateId] = readPrimitiveState(input);
   });
-  if (binding.stateId) {
-    context.value = readPrimitiveState(values?.[binding.stateId]);
-  }
-  return context;
+  return { ...context, ...aliases };
 }
 
 export function resolveRuntimeState(input: RuntimeStateInput): RuntimeResolvedState {
@@ -152,6 +182,29 @@ export function resolveRuntimeState(input: RuntimeStateInput): RuntimeResolvedSt
 
 export function readPrimitiveState(input: RuntimeStateInput): StatePrimitive | undefined {
   return resolveRuntimeState(input).value;
+}
+
+/**
+ * Merges changed values only, preserving the existing object when a state
+ * batch does not change anything rendered by the runtime.
+ */
+export function mergeRuntimeStateValues(
+  current: RuntimeStateValues,
+  updates: Record<string, RuntimeStateInput>,
+): RuntimeStateValues {
+  let nextValues = current;
+
+  Object.entries(updates).forEach(([stateId, value]) => {
+    if (runtimeStateInputsEqual(current[stateId], value)) {
+      return;
+    }
+    if (nextValues === current) {
+      nextValues = { ...current };
+    }
+    nextValues[stateId] = value;
+  });
+
+  return nextValues;
 }
 
 export function formatRuntimeValue(
@@ -204,7 +257,7 @@ function applyBindingTransform(
   let value: StatePrimitive = input;
   if (binding.transform?.formula) {
     value = evaluateFormula(binding.transform.formula, {
-      ...buildFormulaContext(values, binding),
+      ...buildRuntimeFormulaContext(values),
       value,
     });
   }
@@ -242,4 +295,27 @@ function isResolvedState(input: RuntimeStateInput): input is RuntimeResolvedStat
     "missing" in input &&
     "loading" in input
   );
+}
+
+function runtimeStateInputsEqual(left: RuntimeStateInput, right: RuntimeStateInput): boolean {
+  if (Object.is(left, right)) {
+    return true;
+  }
+  if (!left || !right || typeof left !== "object" || typeof right !== "object") {
+    return false;
+  }
+  if (isSnapshot(left) && isSnapshot(right)) {
+    return (
+      left.id === right.id && Object.is(left.value, right.value) && left.missing === right.missing
+    );
+  }
+  if (isResolvedState(left) && isResolvedState(right)) {
+    return (
+      Object.is(left.value, right.value) &&
+      left.missing === right.missing &&
+      left.loading === right.loading &&
+      left.error === right.error
+    );
+  }
+  return false;
 }

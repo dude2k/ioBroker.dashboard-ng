@@ -31,7 +31,8 @@ runtime behavior.
 - Place components on a grid with snap-to-grid.
 - Bind ioBroker states through a searchable state picker.
 - Read and write states.
-- Use safe formulas for calculated values.
+- Use safe multi-state formulas for calculated values, visibility, styles and
+  action conditions with Editor validation and test evaluation.
 - Use conditional visibility, styles and simple actions.
 - Switch between Light and Dark theme presets.
 - Use Editor and Viewer as separate surfaces.

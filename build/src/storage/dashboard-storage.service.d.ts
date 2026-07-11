@@ -30,6 +30,7 @@ export declare class DashboardStorageService {
     saveDashboard(dashboardId: string, dashboard: DashboardProject, traceId?: string): Promise<DashboardProject>;
     listDashboardIds(): Promise<string[]>;
     private writeDashboardFile;
+    private writeDashboardJson;
     private verifyDashboardFile;
     private writeBackup;
     private ensureDirectories;
