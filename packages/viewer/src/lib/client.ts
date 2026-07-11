@@ -85,6 +85,10 @@ export const viewerClient = {
       return response;
     }
 
+    if (!isDemoFallbackAllowed()) {
+      throw new Error("Unable to read states from ioBroker.");
+    }
+
     const values = readMockStates();
     return stateIds.map((id) => ({
       id,

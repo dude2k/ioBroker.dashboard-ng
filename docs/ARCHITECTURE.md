@@ -99,6 +99,7 @@ code.
 - Validation.
 - Migration pipeline.
 - Safe formula evaluator.
+- Formula syntax validation and state-reference extraction.
 - Action engine.
 - Metadata-based device mapping shared by the State Picker and Editor store.
 - Theme presets.
@@ -106,6 +107,12 @@ code.
 
 Shared code must stay UI-framework-light unless it is intentionally in frontend
 packages.
+
+The formula evaluator parses a small expression language and never calls
+`eval`, `Function` or user JavaScript. Explicit `state("id")` references are
+collected before runtime subscription. Editor previews, Viewer cards,
+visibility, conditional styles and action conditions all receive the same live
+state context.
 
 ## State Binding Service
 
@@ -141,6 +148,11 @@ pipeline:
 4. Save only if migration and validation succeed.
 
 Migration failure must leave the original data untouched.
+
+Schema v2 adds a configurable Viewer reconnect interval and comprehensive
+validation for every MVP entity. Storage writes the original dashboard to the
+backup directory before migration, verifies the migrated file after writing and
+restores the original JSON if writing or verification fails.
 
 ## Import/Export
 

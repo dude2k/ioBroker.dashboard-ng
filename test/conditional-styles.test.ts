@@ -73,4 +73,26 @@ describe("conditional styles", () => {
       "",
     );
   });
+
+  it("evaluates formula styles with multiple dashboard states", () => {
+    const project = createDefaultDashboard();
+    const component = {
+      ...project.components[0]!,
+      style: {
+        conditional: {
+          enabled: true,
+          tone: "warning",
+          operator: "formula",
+          formula: 'state("energy.power") > state("energy.limit")',
+        },
+      },
+    };
+
+    expect(
+      resolveConditionalStyleClass(component, [], {
+        "energy.power": 4200,
+        "energy.limit": 3500,
+      }),
+    ).toBe("has-conditional-warning");
+  });
 });

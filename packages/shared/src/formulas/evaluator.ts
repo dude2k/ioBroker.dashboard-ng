@@ -1,5 +1,12 @@
-export type FormulaValue = number | boolean;
+export type FormulaValue = number | boolean | string;
 export type FormulaContext = Record<string, number | boolean | string | null | undefined>;
+const MAX_FORMULA_LENGTH = 4096;
+
+export interface FormulaValidationResult {
+  valid: boolean;
+  stateIds: string[];
+  error?: string;
+}
 
 type Token =
   | { type: "number"; value: number }
@@ -7,6 +14,7 @@ type Token =
   | { type: "operator"; value: string }
   | { type: "paren"; value: "(" | ")" }
   | { type: "comma"; value: "," }
+  | { type: "string"; value: string }
   | { type: "boolean"; value: boolean };
 
 export class FormulaError extends Error {
@@ -17,12 +25,71 @@ export class FormulaError extends Error {
 }
 
 export function evaluateFormula(expression: string, context: FormulaContext = {}): FormulaValue {
+  if (!expression.trim()) {
+    throw new FormulaError("Formula is required.");
+  }
+  assertFormulaLength(expression);
   const parser = new FormulaParser(tokenize(expression), context);
   const result = parser.parse();
-  if (typeof result !== "number" && typeof result !== "boolean") {
-    throw new FormulaError("Formula did not produce a number or boolean.");
+  if (typeof result === "number" && !Number.isFinite(result)) {
+    throw new FormulaError("Formula produced a non-finite number.");
   }
   return result;
+}
+
+export function getFormulaStateIds(
+  expression: string,
+  localIdentifiers: string[] = ["value", "expected"],
+): string[] {
+  assertFormulaLength(expression);
+  const tokens = tokenize(expression);
+  const locals = new Set(localIdentifiers);
+  const stateIds = new Set<string>();
+
+  tokens.forEach((token, index) => {
+    if (token.type !== "identifier") {
+      return;
+    }
+    const next = tokens[index + 1];
+    if (next?.type === "paren" && next.value === "(") {
+      if (token.value === "state") {
+        const argument = tokens[index + 2];
+        if (argument?.type === "string") {
+          stateIds.add(argument.value);
+        }
+      }
+      return;
+    }
+    if (!locals.has(token.value)) {
+      stateIds.add(token.value);
+    }
+  });
+
+  return [...stateIds].sort();
+}
+
+function assertFormulaLength(expression: string): void {
+  if (expression.length > MAX_FORMULA_LENGTH) {
+    throw new FormulaError(`Formula exceeds the ${MAX_FORMULA_LENGTH} character limit.`);
+  }
+}
+
+export function validateFormula(expression: string): FormulaValidationResult {
+  try {
+    const stateIds = getFormulaStateIds(expression);
+    const context: FormulaContext = { value: 1, expected: 1 };
+    stateIds.forEach((stateId) => {
+      context[stateId] = 1;
+    });
+    evaluateFormula(expression, context);
+    return { valid: true, stateIds };
+  } catch (error) {
+    return {
+      valid: false,
+      stateIds: [],
+      error: error instanceof Error ? error.message : "Formula is invalid.",
+    };
+  }
 }
 
 function tokenize(expression: string): Token[] {
@@ -34,6 +101,33 @@ function tokenize(expression: string): Token[] {
 
     if (/\s/.test(char)) {
       index += 1;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      const quote = char;
+      const start = index;
+      let value = "";
+      index += 1;
+      while (index < expression.length && expression[index] !== quote) {
+        const current = expression[index] ?? "";
+        if (current === "\\") {
+          const escaped = expression[index + 1];
+          if (escaped !== quote && escaped !== "\\") {
+            throw new FormulaError(`Unsupported escape sequence at position ${index}.`);
+          }
+          value += escaped;
+          index += 2;
+          continue;
+        }
+        value += current;
+        index += 1;
+      }
+      if (expression[index] !== quote) {
+        throw new FormulaError(`Unterminated string at position ${start}.`);
+      }
+      index += 1;
+      tokens.push({ type: "string", value });
       continue;
     }
 
@@ -200,7 +294,11 @@ class FormulaParser {
         continue;
       }
       if (this.matchOperator("%")) {
-        left = toNumber(left) % toNumber(this.parseUnary());
+        const right = toNumber(this.parseUnary());
+        if (right === 0) {
+          throw new FormulaError("Modulo by zero.");
+        }
+        left = toNumber(left) % right;
         continue;
       }
       return left;
@@ -226,7 +324,7 @@ class FormulaParser {
       throw new FormulaError("Unexpected end of formula.");
     }
 
-    if (token.type === "number" || token.type === "boolean") {
+    if (token.type === "number" || token.type === "boolean" || token.type === "string") {
       return token.value;
     }
 
@@ -251,13 +349,13 @@ class FormulaParser {
   private parseFunctionCall(name: string): FormulaValue {
     const args: FormulaValue[] = [];
     if (this.matchParen(")")) {
-      return callFunction(name, args);
+      return callFunction(name, args, this.context);
     }
 
     while (true) {
       args.push(this.parseOr());
       if (this.matchParen(")")) {
-        return callFunction(name, args);
+        return callFunction(name, args, this.context);
       }
       if (!this.matchComma()) {
         throw new FormulaError("Expected comma in function call.");
@@ -271,17 +369,11 @@ class FormulaParser {
     }
 
     const value = this.context[identifier];
-    if (typeof value === "number" || typeof value === "boolean") {
+    if (typeof value === "number" || typeof value === "boolean" || typeof value === "string") {
       return value;
     }
-    if (typeof value === "string" && value.trim() !== "") {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) {
-        return parsed;
-      }
-    }
 
-    throw new FormulaError(`Formula variable "${identifier}" is not numeric or boolean.`);
+    throw new FormulaError(`Formula variable "${identifier}" has no usable value.`);
   }
 
   private current(): Token | undefined {
@@ -322,21 +414,43 @@ class FormulaParser {
   }
 }
 
-function callFunction(name: string, args: FormulaValue[]): FormulaValue {
-  const numbers = args.map(toNumber);
+function callFunction(name: string, args: FormulaValue[], context: FormulaContext): FormulaValue {
   switch (name) {
-    case "min":
+    case "min": {
+      const numbers = args.map(toNumber);
       requireArgCount(name, numbers, 1);
       return Math.min(...numbers);
-    case "max":
+    }
+    case "max": {
+      const numbers = args.map(toNumber);
       requireArgCount(name, numbers, 1);
       return Math.max(...numbers);
-    case "abs":
+    }
+    case "abs": {
+      const numbers = args.map(toNumber);
       requireArgCount(name, numbers, 1, 1);
       return Math.abs(numbers[0] ?? 0);
-    case "round":
+    }
+    case "round": {
+      const numbers = args.map(toNumber);
       requireArgCount(name, numbers, 1, 2);
       return roundTo(numbers[0] ?? 0, numbers[1] ?? 0);
+    }
+    case "state": {
+      requireArgCount(name, args, 1, 1);
+      const stateId = args[0];
+      if (typeof stateId !== "string") {
+        throw new FormulaError('Function "state" expects a quoted state ID.');
+      }
+      if (!(stateId in context)) {
+        throw new FormulaError(`Unknown state "${stateId}".`);
+      }
+      const value = context[stateId];
+      if (typeof value === "number" || typeof value === "boolean" || typeof value === "string") {
+        return value;
+      }
+      throw new FormulaError(`State "${stateId}" has no usable value.`);
+    }
     default:
       throw new FormulaError(`Unsupported function "${name}".`);
   }
@@ -344,7 +458,7 @@ function callFunction(name: string, args: FormulaValue[]): FormulaValue {
 
 function requireArgCount(
   name: string,
-  args: number[],
+  args: FormulaValue[],
   min: number,
   max = Number.POSITIVE_INFINITY,
 ): void {
@@ -362,12 +476,22 @@ function toNumber(value: FormulaValue): number {
   if (typeof value === "number") {
     return value;
   }
-  return value ? 1 : 0;
+  if (typeof value === "boolean") {
+    return value ? 1 : 0;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new FormulaError(`Cannot use "${value}" as a number.`);
+  }
+  return parsed;
 }
 
 function toBoolean(value: FormulaValue): boolean {
   if (typeof value === "boolean") {
     return value;
   }
-  return value !== 0;
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+  return value.length > 0;
 }

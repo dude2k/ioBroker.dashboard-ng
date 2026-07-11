@@ -108,7 +108,19 @@ export class DashboardStorageService {
 
     if (migration.migrated) {
       backupFile = await this.writeBackup(dashboardId, migration.backup, traceId);
-      await this.writeDashboardFile(dashboardId, migration.project, traceId);
+      try {
+        await this.writeDashboardFile(dashboardId, migration.project, traceId);
+        await this.verifyDashboardFile(dashboardId, migration.project, traceId);
+      } catch (error) {
+        try {
+          await this.writeDashboardJson(dashboardId, migration.backup, traceId, "restore");
+        } catch (restoreError) {
+          throw new Error(
+            `Migration failed and original dashboard could not be restored: ${readError(error)}; restore: ${readError(restoreError)}`,
+          );
+        }
+        throw new Error(`Migration failed; original dashboard restored: ${readError(error)}`);
+      }
       this.logTrace("info", traceId, "migration saved", {
         dashboardId,
         schemaVersion: migration.project.schemaVersion,
@@ -193,15 +205,24 @@ export class DashboardStorageService {
     dashboard: DashboardProject,
     traceId: string,
   ): Promise<void> {
+    await this.writeDashboardJson(dashboardId, dashboard, traceId, "write");
+  }
+
+  private async writeDashboardJson(
+    dashboardId: string,
+    dashboard: unknown,
+    traceId: string,
+    operation: "write" | "restore",
+  ): Promise<void> {
     const fileName = this.dashboardFileName(dashboardId);
     const serialized = `${JSON.stringify(dashboard, null, 2)}\n`;
-    this.logTrace("info", traceId, "write file start", {
+    this.logTrace("info", traceId, `${operation} file start`, {
       dashboardId,
       fileName,
       bytes: serialized.length,
     });
     await this.adapter.writeFileAsync(this.adapter.name, fileName, serialized);
-    this.logTrace("info", traceId, "write file ok", {
+    this.logTrace("info", traceId, `${operation} file ok`, {
       dashboardId,
       fileName,
       bytes: serialized.length,

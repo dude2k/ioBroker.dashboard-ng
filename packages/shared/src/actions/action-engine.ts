@@ -1,5 +1,5 @@
 import type { ActionCondition, ActionStep, DashboardAction, StatePrimitive } from "../schema/types";
-import { evaluateFormula, type FormulaContext } from "../formulas/evaluator";
+import { evaluateFormula, getFormulaStateIds, type FormulaContext } from "../formulas/evaluator";
 
 export interface ActionRuntime {
   getState(id: string): Promise<StatePrimitive | undefined>;
@@ -30,6 +30,9 @@ async function evaluateCondition(
     const context: FormulaContext = {};
     if (condition.stateId) {
       context.value = await runtime.getState(condition.stateId);
+    }
+    for (const stateId of getFormulaStateIds(condition.formula ?? "false")) {
+      context[stateId] = await runtime.getState(stateId);
     }
     return Boolean(evaluateFormula(condition.formula ?? "false", context));
   }

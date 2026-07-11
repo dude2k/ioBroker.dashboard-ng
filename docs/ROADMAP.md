@@ -4,7 +4,7 @@
 
 - Adapter backend with ioBroker lifecycle.
 - Editor and Viewer bundles.
-- Dashboard schema version 1.
+- Dashboard schema version 2.
 - Migration and validation pipeline.
 - Adapter file storage.
 - Dashboard import/export.
@@ -45,6 +45,13 @@ Completed work packages:
   scenes, energy meters and cameras with manual overrides.
 - AP6a: deduplicated active-page live state subscriptions with batched updates,
   cleanup and polling fallback.
+- AP6b: reconnect hardening with stale-data indication, immediate state refresh
+  after reconnect and no-op state batch suppression.
+- AP7: safe multi-state formula engine, Editor state insertion, syntax
+  validation, test evaluation and calculated values in components, conditions
+  and styles.
+- AP11: schema v2, complete MVP entity validation, additive migration history,
+  pre-write backups and automatic restore on migration persistence failure.
 
 Deferred from the original Work Package 3 scope into later MVP work:
 

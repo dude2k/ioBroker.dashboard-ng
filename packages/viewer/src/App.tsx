@@ -1,12 +1,13 @@
 import { Expand, RotateCcw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import type { DashboardProject } from "@dashboard-ng/shared";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { DashboardProject, StatePrimitive } from "@dashboard-ng/shared";
 import {
   clampGridPlacement,
   collectPageStateIds,
   DashboardRuntimeCard,
   getGridBottom,
   isComponentVisible,
+  mergeRuntimeStateValues,
   resolveRuntimeBreakpoint,
   resolveComponentPlacement,
   runtimeCellSize,
@@ -15,6 +16,9 @@ import {
   type RuntimeStateValues,
 } from "@dashboard-ng/runtime";
 import { viewerClient } from "./lib/client";
+
+const emptyBindings = [] as DashboardProject["bindings"];
+const emptyActions = [] as DashboardProject["actions"];
 
 type WakeLockSentinel = {
   release(): Promise<void>;
@@ -38,10 +42,21 @@ export function ViewerApp() {
     : undefined;
   const activeThemeId = project?.settings.activeThemeId;
   const activeTheme = project?.themes.find((theme) => theme.themeId === activeThemeId);
-  const components =
-    project && page
-      ? project.components.filter((component) => component.pageId === page.pageId)
-      : [];
+  const components = useMemo(
+    () =>
+      project && page
+        ? project.components.filter((component) => component.pageId === page.pageId)
+        : [],
+    [page?.pageId, project],
+  );
+  const bindingsByComponentId = useMemo(
+    () => groupByComponentId(project?.bindings ?? emptyBindings),
+    [project?.bindings],
+  );
+  const actionsByComponentId = useMemo(
+    () => groupByComponentId(project?.actions ?? emptyActions),
+    [project?.actions],
+  );
   const visibleComponents = project
     ? components.filter((component) =>
         isComponentVisible(
@@ -62,6 +77,23 @@ export function ViewerApp() {
     [page?.pageId, project],
   );
   const stateKey = stateIds.join("\n");
+  const reconnectIntervalMs = project?.settings.reconnectIntervalMs ?? 2500;
+
+  const handleLocalStateChange = useCallback((stateId: string, nextValue: StatePrimitive) => {
+    setStateValues((current) => mergeRuntimeStateValues(current, { [stateId]: nextValue }));
+  }, []);
+  const handleNavigate = useCallback(
+    (pageId: string) => {
+      if (project?.pages.some((candidate) => candidate.pageId === pageId)) {
+        setActivePageId(pageId);
+      }
+    },
+    [project],
+  );
+  const handleWriteState = useCallback(
+    (stateId: string, value: StatePrimitive) => viewerClient.writeState(stateId, value),
+    [],
+  );
 
   useEffect(() => {
     viewerClient
@@ -94,24 +126,34 @@ export function ViewerApp() {
         return;
       }
       setStateValues((current) => {
-        const nextValues = { ...current };
-        snapshots.forEach((snapshot) => {
-          nextValues[snapshot.id] = snapshot;
-        });
-        return nextValues;
+        const updates = Object.fromEntries(snapshots.map((snapshot) => [snapshot.id, snapshot]));
+        return mergeRuntimeStateValues(current, updates);
       });
       setOnline(true);
     };
-    const tick = async () => {
+    const refreshStates = async (): Promise<boolean> => {
       if (!ids.length) {
-        return;
+        return true;
       }
       try {
         applySnapshots(await viewerClient.readStates(ids));
+        return true;
       } catch {
         if (active) {
           setOnline(false);
         }
+        return false;
+      }
+    };
+    const startPolling = () => {
+      if (pollInterval === undefined) {
+        pollInterval = window.setInterval(() => void refreshStates(), reconnectIntervalMs);
+      }
+    };
+    const stopPolling = () => {
+      if (pollInterval !== undefined) {
+        window.clearInterval(pollInterval);
+        pollInterval = undefined;
       }
     };
     const start = async () => {
@@ -120,16 +162,32 @@ export function ViewerApp() {
       }
       subscription = await subscribeIoBrokerStates(ids, applySnapshots, {
         traceId: "viewer-live-states",
-        onConnectionChange: (connected) => active && setOnline(connected),
+        onConnectionChange: (connected) => {
+          if (!active) {
+            return;
+          }
+          if (!connected) {
+            setOnline(false);
+            startPolling();
+            return;
+          }
+          void refreshStates().then((fresh) => {
+            if (fresh && active) {
+              stopPolling();
+            } else if (active) {
+              startPolling();
+            }
+          });
+        },
       });
       if (!active) {
         subscription?.close();
         return;
       }
       if (!subscription) {
-        await tick();
+        await refreshStates();
         if (active) {
-          pollInterval = window.setInterval(() => void tick(), 2500);
+          startPolling();
         }
       }
     };
@@ -137,11 +195,9 @@ export function ViewerApp() {
     return () => {
       active = false;
       subscription?.close();
-      if (pollInterval !== undefined) {
-        window.clearInterval(pollInterval);
-      }
+      stopPolling();
     };
-  }, [stateKey]);
+  }, [reconnectIntervalMs, stateKey]);
 
   useEffect(() => {
     if (!project?.settings.burnInProtection) {
@@ -218,7 +274,11 @@ export function ViewerApp() {
         </nav>
       </header>
 
-      {!online ? <div className="connection-hint">Connection interrupted</div> : null}
+      {!online ? (
+        <div className="connection-hint" role="status">
+          Reconnecting - showing last known values
+        </div>
+      ) : null}
       {!project ? (
         <div className="viewer-empty">
           <strong>Dashboard not loaded</strong>
@@ -267,12 +327,8 @@ export function ViewerApp() {
               resolveComponentPlacement(component, breakpoint),
               columns,
             );
-            const bindings = project.bindings.filter(
-              (binding) => binding.componentId === component.componentId,
-            );
-            const actions = project.actions.filter(
-              (action) => action.componentId === component.componentId,
-            );
+            const bindings = bindingsByComponentId.get(component.componentId) ?? emptyBindings;
+            const actions = actionsByComponentId.get(component.componentId) ?? emptyActions;
             return (
               <section
                 className="viewer-tile"
@@ -288,15 +344,9 @@ export function ViewerApp() {
                   component={component}
                   mode="viewer"
                   stateValues={stateValues}
-                  onLocalStateChange={(stateId, nextValue) => {
-                    setStateValues((current) => ({ ...current, [stateId]: nextValue }));
-                  }}
-                  onNavigate={(pageId) => {
-                    if (project.pages.some((candidate) => candidate.pageId === pageId)) {
-                      setActivePageId(pageId);
-                    }
-                  }}
-                  onWriteState={(stateId, value) => viewerClient.writeState(stateId, value)}
+                  onLocalStateChange={handleLocalStateChange}
+                  onNavigate={handleNavigate}
+                  onWriteState={handleWriteState}
                 />
               </section>
             );
@@ -305,4 +355,17 @@ export function ViewerApp() {
       ) : null}
     </div>
   );
+}
+
+function groupByComponentId<T extends { componentId: string }>(items: T[]): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  items.forEach((item) => {
+    const group = groups.get(item.componentId);
+    if (group) {
+      group.push(item);
+    } else {
+      groups.set(item.componentId, [item]);
+    }
+  });
+  return groups;
 }

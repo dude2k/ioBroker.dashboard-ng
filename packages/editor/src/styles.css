@@ -387,6 +387,60 @@ button.toolbar-icon-active {
   color: var(--danger);
 }
 
+.formula-editor textarea {
+  min-width: 0;
+  min-height: 76px;
+  resize: vertical;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--panel-strong);
+  font:
+    12px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  letter-spacing: 0;
+}
+
+.formula-editor textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.formula-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.formula-toolbar button {
+  min-width: 0;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--panel-strong);
+  cursor: pointer;
+}
+
+.formula-toolbar button:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.formula-toolbar button:disabled {
+  color: var(--muted);
+  cursor: default;
+  opacity: 0.7;
+}
+
 .binding-header code,
 .binding-footer span {
   min-width: 0;

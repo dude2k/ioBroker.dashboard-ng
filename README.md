@@ -4,7 +4,7 @@ Modern responsive dashboards for ioBroker.
 
 ## Project Status
 
-**Dashboard-NG is not finished yet.** Version `0.5.0` is an installable alpha
+**Dashboard-NG is not finished yet.** Version `0.6.0` is an installable alpha
 baseline for early testing and development. The adapter can be installed from
 GitHub and an instance can run, but the complete MVP feature set from
 `docs/MVP_COMPLETION_TASK.md` is still in progress.
@@ -14,8 +14,8 @@ changes and possible breaking changes before a stable `1.0.0` release.
 
 ## Version
 
-- Current adapter version: `0.5.0`
-- Current GitHub tag: `v0.5.0`
+- Current adapter version: `0.6.0`
+- Current GitHub tag: `v0.6.0`
 - Release status: alpha / installable MVP foundation
 - Versioning scheme: SemVer-style package versions and Git tags named
   `vX.Y.Z`
@@ -102,11 +102,20 @@ states are marked so imported dashboards remain understandable.
 Formulas allow calculated values such as:
 
 ```text
-(stateA + stateB) / 1000
+(state("alias.0.solar.power") + state("alias.0.grid.power")) / 1000
 ```
 
 Formula evaluation is sandboxed by a small parser. Dashboard-NG does not execute
-arbitrary user JavaScript.
+arbitrary user JavaScript. The Editor can insert states, validate syntax and
+test formulas with current values. Formula states are subscribed automatically.
+
+Supported operators are `+`, `-`, `*`, `/`, `%`, `>`, `<`, `>=`, `<=`, `==`,
+`!=`, `&&`, `||` and unary `+`, `-`, `!`. Supported functions are `state`,
+`min`, `max`, `abs` and `round`. Boolean, numeric and quoted string values are
+supported. Binding and transform formulas can use `value`; comparison contexts
+can additionally use `expected`. Use `state("full.ioBroker.id")` for explicit
+state references, especially for IDs that start with a number or contain a
+hyphen.
 
 ## Themes
 
@@ -160,6 +169,18 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 `/adapter/dashboard-ng/index.html` do not end in a 404.
 
 ## Changelog
+
+### 0.6.0 (2026-07-11)
+
+- Completed formula and calculated-value UX with state insertion, syntax
+  validation and live test evaluation in the Editor.
+- Added safe multi-state formulas for component values, transforms, visibility,
+  conditional styles and action conditions.
+- Added automatic live subscriptions for every state referenced by a formula.
+- Added schema v2 with validated Project, Page, Layout, Component, Binding,
+  Action, Theme, Asset and Template entities.
+- Added additive v1 migration, pre-migration backups, write verification and
+  automatic restoration when migration persistence fails.
 
 ### 0.5.0 (2026-07-10)
 
@@ -366,7 +387,7 @@ Dashboards. Nutzer sollen ohne HTML, CSS oder JavaScript schoene Dashboards
 erstellen koennen. Der MVP konzentriert sich auf Editor, Viewer, Grid-Layout,
 State-Binding, sichere Formeln, Import/Export, Themes und stabile Migrationen.
 
-Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.5.0` ist eine
+Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.6.0` ist eine
 installierbare Alpha-Grundlage fuer Tests und Weiterentwicklung, aber noch keine
 stabile Produktivversion.
 

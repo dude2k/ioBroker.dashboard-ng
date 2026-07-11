@@ -5,8 +5,11 @@ export interface MigrationResult {
     migrated: boolean;
     validation: ValidationResult;
 }
+export interface MigrationOptions {
+    now?: string;
+}
 export declare class DashboardMigrationError extends Error {
     readonly validation?: ValidationResult | undefined;
     constructor(message: string, validation?: ValidationResult | undefined);
 }
-export declare function migrateDashboardProject(input: unknown): MigrationResult;
+export declare function migrateDashboardProject(input: unknown, options?: MigrationOptions): MigrationResult;

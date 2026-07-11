@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dashboard-ng",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "news": {
+      "0.6.0": {
+        "en": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "de": "Robuste Wiederverbindung, Multi-State-Formeln, Schema-v2-Validierung und nicht-destruktive Migrationswiederherstellung ergaenzt.",
+        "ru": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "pt": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "nl": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "fr": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "it": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "es": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "pl": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "uk": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery.",
+        "zh-cn": "Added robust reconnect handling, multi-state formulas, schema v2 validation and non-destructive migration recovery."
+      },
       "0.5.0": {
         "en": "Completed advanced inspector controls, object-tree state picker, device mapping and active-page live state subscriptions.",
         "de": "Erweiterte Inspector-Steuerung, Objektbaum-State-Picker, Geraetezuordnung und Live-State-Abos pro aktiver Seite ergaenzt.",

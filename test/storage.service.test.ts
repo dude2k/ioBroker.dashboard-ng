@@ -93,30 +93,12 @@ describe("dashboard storage service", () => {
   });
 
   it("loads dashboard content returned in ioBroker file wrapper objects", async () => {
-    const dashboard = {
-      schemaVersion: 1,
-      projectId: "wrapped",
-      name: "Wrapped Dashboard",
-      pages: [],
-      layouts: {},
-      components: [],
-      bindings: [],
-      actions: [],
-      themes: [],
-      assets: [],
-      templates: [],
-      settings: {
-        activeThemeId: "modern-dark",
-        activePageId: "page-home",
-        kiosk: true,
-        burnInProtection: true,
-        wakeLock: true,
-        advancedMode: false,
-      },
-      createdAt: "2026-07-01T00:00:00.000Z",
-      updatedAt: "2026-07-01T00:00:00.000Z",
-      migrationHistory: [],
-    };
+    const dashboard = structuredClone(
+      createDefaultDashboard({ projectId: "wrapped", name: "Wrapped Dashboard" }),
+    ) as unknown as Record<string, unknown>;
+    dashboard.schemaVersion = 1;
+    delete (dashboard.settings as Record<string, unknown>).reconnectIntervalMs;
+    let storedFile = JSON.stringify(dashboard);
     const adapter: AdapterFileApi = {
       name: "dashboard-ng",
       namespace: "dashboard-ng.0",
@@ -126,8 +108,12 @@ describe("dashboard storage service", () => {
         warn: () => undefined,
         error: () => undefined,
       },
-      readFileAsync: async () => ({ file: JSON.stringify(dashboard) }),
-      writeFileAsync: async () => undefined,
+      readFileAsync: async () => ({ file: storedFile }),
+      writeFileAsync: async (_adapterName, fileName, data) => {
+        if (fileName === "dashboards/wrapped.json") {
+          storedFile = String(data);
+        }
+      },
       mkdirAsync: async () => undefined,
       setStateAsync: async () => undefined,
     };
@@ -136,5 +122,46 @@ describe("dashboard storage service", () => {
 
     expect(stored.dashboard.projectId).toBe("wrapped");
     expect(stored.validation.valid).toBe(true);
+    expect(stored.migrated).toBe(true);
+    expect(stored.backupFile).toContain("dashboards/backups/wrapped-");
+  });
+
+  it("restores the original dashboard when migration verification fails", async () => {
+    const v1 = structuredClone(
+      createDefaultDashboard({ projectId: "restore" }),
+    ) as unknown as Record<string, unknown>;
+    v1.schemaVersion = 1;
+    delete (v1.settings as Record<string, unknown>).reconnectIntervalMs;
+    const original = JSON.stringify(v1);
+    let storedFile = original;
+    let dashboardWrites = 0;
+    const writes: string[] = [];
+    const adapter: AdapterFileApi = {
+      name: "dashboard-ng",
+      namespace: "dashboard-ng.0",
+      log: {
+        debug: () => undefined,
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      },
+      readFileAsync: async () => storedFile,
+      writeFileAsync: async (_adapterName, fileName, data) => {
+        writes.push(fileName);
+        if (fileName === "dashboards/restore.json") {
+          dashboardWrites += 1;
+          storedFile = dashboardWrites === 1 ? "corrupt" : String(data);
+        }
+      },
+      mkdirAsync: async () => undefined,
+    };
+
+    await expect(
+      new DashboardStorageService(adapter).loadDashboard("restore", "test-migration-restore"),
+    ).rejects.toThrow("original dashboard restored");
+
+    expect(JSON.parse(storedFile)).toEqual(JSON.parse(original));
+    expect(writes[0]).toContain("dashboards/backups/restore-");
+    expect(writes.filter((fileName) => fileName === "dashboards/restore.json")).toHaveLength(2);
   });
 });

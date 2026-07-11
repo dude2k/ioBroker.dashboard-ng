@@ -2,8 +2,6 @@ import { CopyPlus, Eye, EyeOff, Lock, Plus, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
 import {
   detectDeviceMapping,
-  evaluateFormula,
-  type FormulaContext,
   type ActionCondition,
   type ActionStep,
   type ActionTrigger,
@@ -32,6 +30,7 @@ import {
   type InspectorField,
 } from "./inspectorFields";
 import { StatePicker } from "./StatePicker";
+import { FormulaEditor } from "./FormulaEditor";
 
 export function Inspector() {
   const project = useEditorStore((state) => state.project);
@@ -210,6 +209,7 @@ export function Inspector() {
             <VisibilityControl
               binding={getComponentBinding(project, component, "visibility")}
               visibility={component.visibility}
+              stateValues={stateValues}
               onSetAlways={() => setComponentVisibility(component.componentId, { kind: "always" })}
               onSetCondition={(stateId, operator, expected) =>
                 setComponentVisibilityCondition(component.componentId, stateId, operator, expected)
@@ -222,6 +222,7 @@ export function Inspector() {
             <ConditionalStyleControl
               binding={getComponentBinding(project, component, "style")}
               rule={getConditionalStyleRule(component)}
+              stateValues={stateValues}
               onChange={(rule) => setComponentConditionalStyle(component.componentId, rule)}
             />
           </>
@@ -409,7 +410,6 @@ function BindingTargetControl({
     ? target.modes
     : [selectedMode, ...target.modes];
   const formula = binding?.formula ?? "value";
-  const formulaValidation = validateInspectorFormula(formula, binding?.stateId, stateValues);
   const pickerAccess =
     source === "formula"
       ? "read"
@@ -481,21 +481,24 @@ function BindingTargetControl({
       />
 
       {source === "formula" ? (
-        <label className="field">
-          <span className="field-label">Formula</span>
-          <input
-            value={formula}
-            onChange={(event) => onSetFormula(binding?.stateId, event.target.value)}
-            placeholder="value / 1000"
-          />
-          <span className={formulaValidation.valid ? "formula-status" : "formula-status has-error"}>
-            {formulaValidation.message}
-          </span>
-        </label>
+        <FormulaEditor
+          value={formula}
+          stateValues={stateValues}
+          aliases={{
+            value: binding?.stateId ? stateValues[binding.stateId] : undefined,
+          }}
+          placeholder="value / 1000"
+          onChange={(nextFormula) => onSetFormula(binding?.stateId, nextFormula)}
+        />
       ) : null}
 
       {advancedMode && binding ? (
-        <BindingTransformControl transform={binding.transform} onChange={onSetTransform} />
+        <BindingTransformControl
+          transform={binding.transform}
+          stateId={binding.stateId}
+          stateValues={stateValues}
+          onChange={onSetTransform}
+        />
       ) : null}
 
       {binding ? (
@@ -514,9 +517,13 @@ function BindingTargetControl({
 
 function BindingTransformControl({
   transform,
+  stateId,
+  stateValues,
   onChange,
 }: {
   transform: BindingTransform | undefined;
+  stateId: string | undefined;
+  stateValues: Record<string, StatePrimitive>;
   onChange(transform: BindingTransform | undefined): void;
 }) {
   const format = transform?.format ?? "raw";
@@ -573,16 +580,15 @@ function BindingTransformControl({
           placeholder="Automatic"
         />
       </label>
-      <label className="field">
-        <span className="field-label">Transform formula</span>
-        <input
-          value={transform?.formula ?? ""}
-          onChange={(event) =>
-            event.target.value ? update({ formula: event.target.value }) : update({}, ["formula"])
-          }
-          placeholder="value / 1000"
-        />
-      </label>
+      <FormulaEditor
+        label="Transform formula"
+        value={transform?.formula ?? ""}
+        optional
+        stateValues={stateValues}
+        aliases={{ value: stateId ? stateValues[stateId] : undefined }}
+        placeholder="value / 1000"
+        onChange={(formula) => (formula ? update({ formula }) : update({}, ["formula"]))}
+      />
     </div>
   );
 }
@@ -592,12 +598,14 @@ type VisibilityMode = "always" | VisibilityOperator | "formula";
 function VisibilityControl({
   binding,
   visibility,
+  stateValues,
   onSetAlways,
   onSetCondition,
   onSetFormula,
 }: {
   binding: Binding | undefined;
   visibility: VisibilityRule | undefined;
+  stateValues: Record<string, StatePrimitive>;
   onSetAlways(): void;
   onSetCondition(stateId: string, operator: VisibilityOperator, expected: StatePrimitive): void;
   onSetFormula(formula: string): void;
@@ -639,14 +647,16 @@ function VisibilityControl({
         </label>
 
         {mode === "formula" ? (
-          <label className="field">
-            <span className="field-label">Formula</span>
-            <input
-              value={formula}
-              onChange={(event) => onSetFormula(event.target.value)}
-              placeholder="value == true"
-            />
-          </label>
+          <FormulaEditor
+            value={formula}
+            stateValues={stateValues}
+            aliases={{
+              value: binding?.stateId ? stateValues[binding.stateId] : undefined,
+              expected,
+            }}
+            placeholder='state("alias.0.presence") == true'
+            onChange={onSetFormula}
+          />
         ) : null}
 
         {mode !== "always" && mode !== "formula" ? (
@@ -697,10 +707,12 @@ function visibilityMode(visibility: VisibilityRule | undefined): VisibilityMode 
 function ConditionalStyleControl({
   binding,
   rule,
+  stateValues,
   onChange,
 }: {
   binding: Binding | undefined;
   rule: ConditionalStyleRule | undefined;
+  stateValues: Record<string, StatePrimitive>;
   onChange(rule: ConditionalStyleRule | undefined): void;
 }) {
   const current: ConditionalStyleRule = rule ?? {
@@ -761,14 +773,16 @@ function ConditionalStyleControl({
             </label>
 
             {current.operator === "formula" ? (
-              <label className="field">
-                <span className="field-label">Formula</span>
-                <input
-                  value={current.formula ?? ""}
-                  onChange={(event) => update({ formula: event.target.value })}
-                  placeholder="value == true"
-                />
-              </label>
+              <FormulaEditor
+                value={current.formula ?? ""}
+                stateValues={stateValues}
+                aliases={{
+                  value: stateId ? stateValues[stateId] : undefined,
+                  expected: current.expected,
+                }}
+                placeholder='state("alias.0.temperature") > 25'
+                onChange={(formula) => update({ formula })}
+              />
             ) : (
               <>
                 <StatePicker
@@ -818,32 +832,6 @@ function bindingModeForOption(
   return selectedMode;
 }
 
-function validateInspectorFormula(
-  formula: string,
-  stateId: string | undefined,
-  stateValues: Record<string, StatePrimitive>,
-): { valid: boolean; message: string } {
-  if (!formula.trim()) {
-    return { valid: false, message: "Formula is required" };
-  }
-  try {
-    const context: FormulaContext = {};
-    if (stateId) {
-      context.value = stateValues[stateId] ?? 1;
-    }
-    Object.entries(stateValues).forEach(([id, value]) => {
-      context[id] = value;
-    });
-    const result = evaluateFormula(formula, context);
-    return { valid: true, message: `OK -> ${String(result)}` };
-  } catch (error) {
-    return {
-      valid: false,
-      message: error instanceof Error ? error.message : "Formula is invalid",
-    };
-  }
-}
-
 type ActionConditionMode = "none" | ActionCondition["kind"];
 
 function ActionConditionControl({
@@ -858,7 +846,6 @@ function ActionConditionControl({
   const mode: ActionConditionMode = condition?.kind ?? "none";
   const formula = condition?.formula ?? "true";
   const expected = condition?.value ?? true;
-  const formulaValidation = validateInspectorFormula(formula, condition?.stateId, stateValues);
 
   return (
     <div className="action-condition">
@@ -904,23 +891,19 @@ function ActionConditionControl({
       ) : null}
 
       {mode === "formula" ? (
-        <label className="field">
-          <span className="field-label">Formula</span>
-          <input
-            value={formula}
-            onChange={(event) =>
-              onChange({
-                kind: "formula",
-                ...(condition?.stateId ? { stateId: condition.stateId } : {}),
-                formula: event.target.value,
-              })
-            }
-            placeholder="value > 10"
-          />
-          <span className={formulaValidation.valid ? "formula-status" : "formula-status has-error"}>
-            {formulaValidation.message}
-          </span>
-        </label>
+        <FormulaEditor
+          value={formula}
+          stateValues={stateValues}
+          aliases={{ value: condition?.stateId ? stateValues[condition.stateId] : undefined }}
+          placeholder='state("alias.0.power") > 1000'
+          onChange={(nextFormula) =>
+            onChange({
+              kind: "formula",
+              ...(condition?.stateId ? { stateId: condition.stateId } : {}),
+              formula: nextFormula,
+            })
+          }
+        />
       ) : null}
 
       {mode !== "none" && mode !== "formula" ? (

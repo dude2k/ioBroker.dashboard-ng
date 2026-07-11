@@ -10,6 +10,10 @@ export interface MigrationResult {
   validation: ValidationResult;
 }
 
+export interface MigrationOptions {
+  now?: string;
+}
+
 export class DashboardMigrationError extends Error {
   constructor(
     message: string,
@@ -20,11 +24,15 @@ export class DashboardMigrationError extends Error {
   }
 }
 
-export function migrateDashboardProject(input: unknown): MigrationResult {
+export function migrateDashboardProject(
+  input: unknown,
+  options: MigrationOptions = {},
+): MigrationResult {
   const backup = cloneJson(input);
   let working = cloneJson(input);
   let version = readSchemaVersion(working);
   let migrated = false;
+  const now = options.now ?? new Date().toISOString();
 
   if (version > CURRENT_SCHEMA_VERSION) {
     throw new DashboardMigrationError(
@@ -38,9 +46,15 @@ export function migrateDashboardProject(input: unknown): MigrationResult {
 
   while (version < CURRENT_SCHEMA_VERSION) {
     if (version === 0) {
-      working = migrate0To1(working);
+      working = migrate0To1(working, now);
       migrated = true;
       version = 1;
+      continue;
+    }
+    if (version === 1) {
+      working = migrate1To2(working, now);
+      migrated = true;
+      version = 2;
       continue;
     }
 
@@ -60,9 +74,8 @@ export function migrateDashboardProject(input: unknown): MigrationResult {
   };
 }
 
-function migrate0To1(input: unknown): DashboardProject {
+function migrate0To1(input: unknown, now: string): DashboardProject {
   const record = isRecord(input) ? input : {};
-  const now = new Date().toISOString();
   const name = typeof record.name === "string" && record.name.trim() ? record.name : "My Home";
   const projectId =
     typeof record.projectId === "string" && record.projectId.trim() ? record.projectId : "default";
@@ -75,6 +88,40 @@ function migrate0To1(input: unknown): DashboardProject {
   };
   project.migrationHistory = [entry];
   return project;
+}
+
+function migrate1To2(input: unknown, now: string): DashboardProject {
+  if (!isRecord(input)) {
+    throw new DashboardMigrationError("Schema v1 dashboard must be an object.");
+  }
+  const defaults = createDefaultDashboard({ now });
+  const history = Array.isArray(input.migrationHistory) ? input.migrationHistory : [];
+  const settings = isRecord(input.settings) ? input.settings : {};
+  return {
+    ...input,
+    schemaVersion: 2,
+    settings: {
+      ...defaults.settings,
+      ...settings,
+      reconnectIntervalMs:
+        typeof settings.reconnectIntervalMs === "number" && settings.reconnectIntervalMs >= 500
+          ? settings.reconnectIntervalMs
+          : defaults.settings.reconnectIntervalMs,
+    },
+    assets: Array.isArray(input.assets) ? input.assets : [],
+    templates: Array.isArray(input.templates) ? input.templates : [],
+    themes: Array.isArray(input.themes) ? input.themes : defaults.themes,
+    updatedAt: now,
+    migrationHistory: [
+      ...history,
+      {
+        fromVersion: 1,
+        toVersion: 2,
+        migratedAt: now,
+        note: "Added reconnect settings and full MVP entity validation.",
+      },
+    ],
+  } as DashboardProject;
 }
 
 function readSchemaVersion(value: unknown): number {

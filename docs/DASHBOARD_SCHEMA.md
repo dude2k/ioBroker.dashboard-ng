@@ -1,6 +1,6 @@
 # Dashboard Schema
 
-Current schema version: `1`
+Current schema version: `2`
 
 Dashboard data is JSON and must remain migratable. Never change this schema
 without updating migrations, validation and tests.
@@ -106,6 +106,13 @@ Optional value transforms can apply a safe formula using `value`, round to a
 configured number of decimal places and select a display format such as number,
 percent, temperature, power or energy.
 
+Formula state references use `state("full.ioBroker.id")`. The runtime extracts
+these references and subscribes to them on the active page. Direct identifiers
+remain supported for simple IDs. Formulas support arithmetic, comparison and
+boolean operators plus `min`, `max`, `abs` and `round`. They may return a number,
+boolean or string. Stored formulas are syntax-validated with the project and do
+not execute JavaScript.
+
 ## Action
 
 Actions describe interactions:
@@ -116,8 +123,9 @@ Actions describe interactions:
 - Optional ordered `elseSteps` when the condition is false
 
 Formula conditions can use an optional input state through the `value`
-identifier. Swipe means one direction-independent horizontal swipe; direction
-specific gestures are intentionally outside the MVP schema.
+identifier and any number of explicit `state("id")` references. Swipe means one
+direction-independent horizontal swipe; direction specific gestures are
+intentionally outside the MVP schema.
 
 Actions are intentionally simple. They are not an automation platform.
 
@@ -164,12 +172,20 @@ Templates are reusable JSON snippets:
 
 Templates cannot contain executable code.
 
+## Project Settings
+
+Runtime settings include kiosk, burn-in protection, Wake Lock, Advanced Mode
+and `reconnectIntervalMs`. Schema v2 requires reconnect intervals between 500
+and 60000 milliseconds; v1 dashboards migrate to the 2500 ms default.
+
 ## Migrations
 
 Rules:
 
 - Increase `schemaVersion` for every schema change.
 - Add a migration from previous version to new version.
+- Back up the original before writing migrated data.
+- Verify migrated writes and restore the original if persistence fails.
 - Create a backup before migration.
 - Validate after migration.
 - Keep old data untouched if migration fails.

@@ -59,6 +59,27 @@ describe("formula bindings", () => {
     expect(resolved.stateId).toBe("alias.0.energy");
   });
 
+  it("calculates component values from multiple referenced states", () => {
+    const binding: Binding = {
+      bindingId: "bind-calculated",
+      componentId: "cmp-energy",
+      target: "value",
+      kind: "formula",
+      mode: "read",
+      formula: '(state("solar.power") + state("grid.power")) / 1000',
+      missing: false,
+    };
+
+    const resolved = resolveTargetState([binding], {
+      "solar.power": 1400,
+      "grid.power": 600,
+    });
+
+    expect(resolved.value).toBe(2);
+    expect(resolved.loading).toBe(false);
+    expect(resolved.error).toBeUndefined();
+  });
+
   it("keeps invalid runtime formulas visible as target errors", () => {
     const binding: Binding = {
       bindingId: "bind-formula",
@@ -78,6 +99,21 @@ describe("formula bindings", () => {
     expect(resolved.writable).toBe(false);
   });
 
+  it("contains formula tokenization errors inside the target state", () => {
+    const binding: Binding = {
+      bindingId: "bind-invalid-token",
+      componentId: "cmp-sensor",
+      target: "value",
+      kind: "formula",
+      mode: "read",
+      formula: "value ? 2",
+      missing: false,
+    };
+
+    expect(() => resolveTargetState([binding], {})).not.toThrow();
+    expect(resolveTargetState([binding], {}).error).toContain("Unsupported character");
+  });
+
   it("applies value transforms and display formats", () => {
     const binding: Binding = {
       bindingId: "bind-transform",
@@ -95,5 +131,26 @@ describe("formula bindings", () => {
     expect(resolved.value).toBe(2.16);
     expect(getBindingDisplayUnit(resolved.binding)).toBe("kWh");
     expect(resolved.error).toBeUndefined();
+  });
+
+  it("reports invalid stored formulas with their schema path", () => {
+    const project = createDefaultDashboard();
+    project.bindings[0] = {
+      ...project.bindings[0]!,
+      kind: "formula",
+      mode: "read",
+      formula: "value / 0",
+    };
+
+    expect(validateDashboardProject(project)).toMatchObject({
+      valid: false,
+      issues: [
+        expect.objectContaining({
+          path: "$.bindings[0].formula",
+          message: "Division by zero.",
+          severity: "error",
+        }),
+      ],
+    });
   });
 });

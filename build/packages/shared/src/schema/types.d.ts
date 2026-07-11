@@ -1,4 +1,4 @@
-export declare const CURRENT_SCHEMA_VERSION = 1;
+export declare const CURRENT_SCHEMA_VERSION = 2;
 export type DashboardBreakpoint = "phone" | "tablet" | "desktop" | "wall";
 export type ComponentType = "room-card" | "light-card" | "thermostat-card" | "blind-card" | "sensor-card" | "scene-button" | "energy-card" | "mini-chart-card" | "camera-card" | "text" | "container" | "button" | "value-display";
 export type BindingKind = "state" | "formula";
@@ -169,6 +169,7 @@ export interface ProjectSettings {
     burnInProtection: boolean;
     wakeLock: boolean;
     advancedMode: boolean;
+    reconnectIntervalMs: number;
 }
 export interface MigrationEntry {
     fromVersion: number;

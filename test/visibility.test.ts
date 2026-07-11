@@ -87,4 +87,28 @@ describe("conditional visibility", () => {
       ),
     ).toBe(false);
   });
+
+  it("evaluates visibility formulas with multiple dashboard states", () => {
+    const project = createDefaultDashboard();
+    const component = {
+      ...project.components[0]!,
+      visibility: {
+        kind: "formula" as const,
+        formula: 'state("presence.home") && state("alarm.enabled") == false',
+      },
+    };
+
+    expect(
+      isComponentVisible(component, [], {
+        "presence.home": true,
+        "alarm.enabled": false,
+      }),
+    ).toBe(true);
+    expect(
+      isComponentVisible(component, [], {
+        "presence.home": false,
+        "alarm.enabled": false,
+      }),
+    ).toBe(false);
+  });
 });
