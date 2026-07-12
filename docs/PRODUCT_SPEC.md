@@ -34,7 +34,12 @@ runtime behavior.
 - Use safe multi-state formulas for calculated values, visibility, styles and
   action conditions with Editor validation and test evaluation.
 - Use conditional visibility, styles and simple actions.
-- Switch between Light and Dark theme presets.
+- Group cards with nested Sections and Containers.
+- Use exact layout values and per-breakpoint overrides in Advanced Mode.
+- Switch between Modern Dark, Clean Light, Glass Panel and Minimal Wall Tablet
+  theme presets.
+- Save and reuse pages, sections and card groups as templates.
+- Embed uploaded image and SVG assets portably in dashboard exports.
 - Use Editor and Viewer as separate surfaces.
 - Use kiosk/fullscreen, optional Wake Lock and burn-in protection.
 - See missing states clearly after import or object deletion.
@@ -53,16 +58,18 @@ runtime behavior.
 The user starts in the Editor, adds components from the palette, places them on
 the grid with a snapped drop preview, adjusts position and size through handles,
 binds states in the inspector and immediately sees a live preview.
-Advanced Mode can expose more precise settings, but the default workflow must
-stay simple.
+Advanced Mode exposes exact layout values and optional overrides for phone,
+tablet, desktop and wall-panel breakpoints, while the default workflow stays
+simple.
 
 ## Editor Concept
 
-- Left palette: components and templates.
+- Left palette: components; reusable templates are available through the
+  template library.
 - Center: page tabs and responsive grid canvas with multi-select, snap-to-grid,
   move handles, resize handles and portrait/landscape preview frames.
 - Right inspector: selected component or multi-selection, bindings, actions,
-  visibility and style.
+  visibility, style and Advanced Mode layout controls.
 - Top bar: save, import/export, undo/redo, copy/paste, duplicate, lock,
   editor-hide, theme, preview size, orientation and Edit/View switch.
 - State picker: search object IDs, names, roles, units and write capability.
@@ -87,14 +94,16 @@ The shared runtime renders these MVP cards in both Editor preview and Viewer:
 - Mini Chart Card: compact trend display.
 - Camera Card: image or snapshot display.
 
-Base components may exist internally: Text, Icon, Image, Container, Button and
-Value Display.
+Base components may exist internally: Text, Icon, Image, Section, Container,
+Button and Value Display.
 
 ## Template Concept
 
 Templates can represent whole pages, sections or component groups. MVP ships
 with starter templates for a wall-panel room overview and a compact mobile
 status page. Templates are JSON data using the same schema, not executable code.
+Uploaded image and SVG assets are embedded as Data URLs; HTTP(S) assets remain
+external references.
 
 ## Kiosk And Wall Panel
 

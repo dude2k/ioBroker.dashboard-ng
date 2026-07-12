@@ -35,7 +35,6 @@ climate.
 Important fields:
 
 - `pageId`
-- `parentId` (optional; references a Section or Container on the same page)
 - `name`
 - `icon`
 - `order`
@@ -52,6 +51,10 @@ Layouts define grid behavior. MVP uses grid-based placement with breakpoints:
 - `wall`
 
 Each component stores placement per breakpoint with `x`, `y`, `w`, `h`.
+Missing breakpoint values inherit from another stored placement. Advanced Mode
+can create exact overrides or reset an override while retaining at least one
+layout value. Editor previews and Viewer use the same canonical column counts:
+phone 4, tablet 8, desktop 12 and wall 12.
 
 ## Component
 
@@ -60,6 +63,7 @@ Components are concrete UI elements:
 - `componentId`
 - `type`
 - `pageId`
+- `parentId` (optional; references a Section or Container on the same page)
 - `name`
 - `props`
 - `style`

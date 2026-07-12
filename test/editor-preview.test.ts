@@ -6,6 +6,7 @@ import {
   togglePreviewOrientation,
 } from "../packages/editor/src/lib/preview";
 import { useEditorStore } from "../packages/editor/src/store/editorStore";
+import { runtimeColumns } from "../packages/runtime/src/layout";
 
 describe("editor responsive preview", () => {
   it("defines portrait and landscape viewports for every preview device", () => {
@@ -19,6 +20,14 @@ describe("editor responsive preview", () => {
         expect(viewport.cell).toBeGreaterThan(0);
         expect(viewport.width).toBe(viewport.columns * viewport.cell);
         expect(viewport.label).toContain(device[0]!.toUpperCase() + device.slice(1));
+      });
+    });
+  });
+
+  it("uses the same breakpoint columns as the Viewer in both orientations", () => {
+    previewDevices.forEach((device) => {
+      previewOrientations.forEach((orientation) => {
+        expect(getPreviewViewport(device, orientation).columns).toBe(runtimeColumns[device]);
       });
     });
   });

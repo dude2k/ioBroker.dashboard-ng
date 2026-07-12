@@ -25,6 +25,13 @@ describe("adapter package metadata", () => {
     expect(packageJson.repository.url).toBe("https://github.com/dude2k/ioBroker.dashboard-ng.git");
   });
 
+  it("provides the complete automated release gate", () => {
+    expect(packageJson.scripts["release:check"]).toContain("format:check");
+    expect(packageJson.scripts["release:check"]).toContain("test:package");
+    expect(packageJson.scripts["release:check"]).toContain("test:integration");
+    expect(packageJson.scripts["release:check"]).toContain("adapter:check");
+  });
+
   it("uses current ioBroker license and tier metadata", () => {
     expect(ioPackageJson.common.licenseInformation).toEqual({
       type: "free",

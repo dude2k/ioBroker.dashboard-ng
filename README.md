@@ -4,10 +4,9 @@ Modern responsive dashboards for ioBroker.
 
 ## Project Status
 
-**Dashboard-NG is not finished yet.** Version `0.7.0` is an installable alpha
-baseline for early testing and development. The adapter can be installed from
-GitHub and an instance can run, but the complete MVP feature set from
-`docs/MVP_COMPLETION_TASK.md` is still in progress.
+Version `0.7.0` is an installable alpha for early testing and development. The
+MVP feature set is implemented, but broader real-world ioBroker installation
+coverage is still required before a stable `1.0.0` release.
 
 Do not treat this project as production-ready. Expect missing features, schema
 changes and possible breaking changes before a stable `1.0.0` release.
@@ -40,6 +39,15 @@ JavaScript.
 - Light and dark theme presets.
 - Import/export for dashboards.
 - Kiosk/fullscreen, optional Wake Lock and burn-in protection.
+
+## Documentation
+
+- [User Guide](docs/USER_GUIDE.md) (English)
+- [Benutzerhandbuch](docs/BENUTZERHANDBUCH.md) (Deutsch)
+- [Dashboard Schema](docs/DASHBOARD_SCHEMA.md)
+- [Product Specification](docs/PRODUCT_SPEC.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Roadmap](docs/ROADMAP.md)
 
 ## Installation
 
@@ -159,6 +167,7 @@ npm install
 npm run build
 npm test
 npm run lint
+npm run release:check
 ```
 
 Useful scripts:
@@ -173,9 +182,9 @@ Useful scripts:
 ## ioBroker Compatibility
 
 The adapter uses `@iobroker/adapter-core`, `io-package.json`, `admin/` for the
-Editor and `www/` for the Viewer. It is prepared for ioBroker adapter checks,
-but the MVP still needs validation in real ioBroker installations before a
-stable release.
+Editor and `www/` for the Viewer. The automated release gate includes package,
+integration and repository checks. Manual browser and real-state validation in
+a full ioBroker installation remains required before a stable release.
 
 ioBroker uploads the Viewer files from `www/` into the `dashboard-ng` file
 namespace. The web adapter URL is `/dashboard-ng/index.html`; `/adapter/...`
@@ -409,12 +418,12 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 
 Dashboard-NG ist ein moderner ioBroker-Adapter fuer responsive Smart-Home-
 Dashboards. Nutzer sollen ohne HTML, CSS oder JavaScript schoene Dashboards
-erstellen koennen. Der MVP konzentriert sich auf Editor, Viewer, Grid-Layout,
-State-Binding, sichere Formeln, Import/Export, Themes und stabile Migrationen.
+erstellen koennen. Eine vollstaendige Anleitung steht im
+[Benutzerhandbuch](docs/BENUTZERHANDBUCH.md).
 
 Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.7.0` ist eine
-installierbare Alpha-Grundlage fuer Tests und Weiterentwicklung, aber noch keine
-stabile Produktivversion.
+installierbare Alpha fuer Tests und Weiterentwicklung, aber noch keine stabile
+Produktivversion.
 
 ## License
 
