@@ -98,7 +98,7 @@ function createDefaultDashboard(options = {}) {
         components: [light, sensor, scene],
         bindings,
         actions,
-        themes: [presets_1.modernDarkTheme, presets_1.cleanLightTheme],
+        themes: presets_1.themePresets.map((theme) => structuredClone(theme)),
         assets: [],
         templates: createStarterTemplates(now),
         settings: {

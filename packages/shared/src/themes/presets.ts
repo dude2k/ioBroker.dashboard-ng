@@ -94,4 +94,85 @@ export const cleanLightTheme: Theme = {
   },
 };
 
-export const themePresets = [modernDarkTheme, cleanLightTheme] as const;
+export const glassPanelTheme: Theme = {
+  themeId: "glass-panel",
+  name: "Glass Panel",
+  mode: "dark",
+  tokens: {
+    colors: {
+      background: "#152033",
+      surface: "#22314b",
+      surfaceElevated: "#304364",
+      text: "#f4f8ff",
+      mutedText: "#b1c0d8",
+      accent: "#5eead4",
+      accentText: "#073b38",
+      success: "#4ade80",
+      warning: "#fbbf24",
+      danger: "#fb7185",
+      border: "#58708f",
+    },
+    typography: {
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+      baseSize: 15,
+      scale: 1.18,
+    },
+    spacing: { unit: 8, pagePadding: 20, cardPadding: 16 },
+    radius: { small: 6, medium: 10, large: 14 },
+    shadow: {
+      card: "0 16px 34px rgba(4, 12, 26, 0.3)",
+      elevated: "0 24px 56px rgba(4, 12, 26, 0.42)",
+    },
+    blur: { panel: 16 },
+    border: { width: 1 },
+  },
+};
+
+export const minimalWallTheme: Theme = {
+  themeId: "minimal-wall",
+  name: "Minimal Wall Tablet",
+  mode: "light",
+  tokens: {
+    colors: {
+      background: "#f5f7f8",
+      surface: "#ffffff",
+      surfaceElevated: "#e8edef",
+      text: "#182126",
+      mutedText: "#66747d",
+      accent: "#0f766e",
+      accentText: "#ffffff",
+      success: "#15803d",
+      warning: "#b45309",
+      danger: "#b91c1c",
+      border: "#d3dce0",
+    },
+    typography: {
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+      baseSize: 16,
+      scale: 1.16,
+    },
+    spacing: { unit: 8, pagePadding: 24, cardPadding: 18 },
+    radius: { small: 4, medium: 6, large: 8 },
+    shadow: {
+      card: "0 4px 12px rgba(24, 33, 38, 0.08)",
+      elevated: "0 10px 28px rgba(24, 33, 38, 0.12)",
+    },
+    blur: { panel: 0 },
+    border: { width: 1 },
+  },
+};
+
+export const themePresets = [
+  modernDarkTheme,
+  cleanLightTheme,
+  glassPanelTheme,
+  minimalWallTheme,
+] as const;
+
+export function ensureThemePresets(themes: Theme[]): Theme[] {
+  const known = new Set(themes.map((theme) => theme.themeId));
+  const missing = themePresets.filter((theme) => !known.has(theme.themeId));
+  return missing.length ? [...themes, ...missing.map((theme) => structuredClone(theme))] : themes;
+}

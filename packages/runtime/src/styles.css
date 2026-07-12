@@ -13,6 +13,10 @@
   --runtime-accent-2: var(--accent-2, #2563eb);
   --runtime-warn: var(--warn, #f59e0b);
   --runtime-danger: var(--danger, #ef4444);
+  --runtime-card-radius: var(--radius-medium, 8px);
+  --runtime-card-padding: var(--card-padding, 14px);
+  --runtime-card-shadow: var(--card-shadow, 0 14px 34px rgba(0, 0, 0, 0.16));
+  --runtime-border-width: var(--border-width, 1px);
   position: relative;
   width: 100%;
   height: 100%;
@@ -20,12 +24,12 @@
   display: grid;
   align-content: space-between;
   gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--runtime-border);
-  border-radius: 8px;
+  padding: var(--runtime-card-padding);
+  border: var(--runtime-border-width) solid var(--runtime-border);
+  border-radius: var(--runtime-card-radius);
   color: var(--runtime-text);
   background: var(--runtime-surface);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--runtime-card-shadow);
   overflow: hidden;
   text-align: left;
 }
@@ -42,8 +46,8 @@ button.dng-runtime-card:disabled {
 .dng-runtime-card.mode-viewer {
   min-height: 96px;
   gap: 12px;
-  padding: 18px;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
+  padding: max(var(--runtime-card-padding), 18px);
+  box-shadow: var(--elevated-shadow, 0 18px 42px rgba(0, 0, 0, 0.18));
 }
 
 .dng-runtime-card svg {
@@ -190,7 +194,7 @@ button.dng-runtime-card:disabled {
   min-width: 0;
   padding: 5px 8px;
   border: 1px solid var(--runtime-border);
-  border-radius: 8px;
+  border-radius: var(--radius-small, 8px);
   color: var(--runtime-muted);
   background: var(--runtime-surface-strong);
   font-size: 12px;
@@ -199,7 +203,7 @@ button.dng-runtime-card:disabled {
 .dng-runtime-progress {
   height: 8px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--radius-large, 999px);
   background: var(--runtime-surface-strong);
 }
 
@@ -229,7 +233,7 @@ button.dng-runtime-card:disabled {
   min-height: 92px;
   height: 100%;
   object-fit: cover;
-  border-radius: 7px;
+  border-radius: var(--radius-small, 7px);
   background: var(--runtime-surface-strong);
 }
 

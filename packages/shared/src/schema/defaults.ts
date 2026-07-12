@@ -8,7 +8,7 @@ import type {
 } from "./types";
 import { CURRENT_SCHEMA_VERSION } from "./types";
 import { createComponentFromCatalog } from "../components/catalog";
-import { cleanLightTheme, modernDarkTheme } from "../themes/presets";
+import { modernDarkTheme, themePresets } from "../themes/presets";
 
 export interface DefaultDashboardOptions {
   projectId?: string;
@@ -132,7 +132,7 @@ export function createDefaultDashboard(options: DefaultDashboardOptions = {}): D
     components: [light, sensor, scene],
     bindings,
     actions,
-    themes: [modernDarkTheme, cleanLightTheme],
+    themes: themePresets.map((theme) => structuredClone(theme)),
     assets: [],
     templates: createStarterTemplates(now),
     settings: {

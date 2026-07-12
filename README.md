@@ -119,13 +119,17 @@ hyphen.
 
 ## Themes
 
-The MVP contains two theme presets:
+The MVP contains four theme presets:
 
 - Modern Dark
 - Clean Light
+- Glass Panel
+- Minimal Wall Tablet
 
 Themes use design tokens for colors, typography, spacing, radius, shadows,
-borders and related visual defaults.
+borders and related visual defaults. The Editor Project Settings panel lets
+you adjust these tokens centrally for the active theme; the Viewer uses the
+same values.
 
 ## Import And Export
 
@@ -142,8 +146,9 @@ available.
 
 ## Kiosk Mode
 
-Viewer supports fullscreen, optional Wake Lock and burn-in protection. These
-features are designed for wall tablets and can be disabled.
+Viewer supports reload, fullscreen entry and exit, optional Wake Lock and
+subtle burn-in protection. These features are designed for wall tablets, can
+be disabled in Project Settings and recover cleanly after visibility changes.
 
 ## Development
 

@@ -25,4 +25,5 @@ __exportStar(require("./schema/migrations"), exports);
 __exportStar(require("./schema/types"), exports);
 __exportStar(require("./schema/validation"), exports);
 __exportStar(require("./themes/presets"), exports);
+__exportStar(require("./themes/tokens"), exports);
 //# sourceMappingURL=index.js.map

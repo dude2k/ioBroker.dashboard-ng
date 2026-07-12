@@ -1,6 +1,11 @@
-import { Expand, RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { DashboardProject, StatePrimitive } from "@dashboard-ng/shared";
+import { Expand, Minimize, RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  ensureThemePresets,
+  themeCssVariables,
+  type DashboardProject,
+  type StatePrimitive,
+} from "@dashboard-ng/shared";
 import {
   clampGridPlacement,
   collectPageStateIds,
@@ -16,12 +21,14 @@ import {
   type RuntimeStateValues,
 } from "@dashboard-ng/runtime";
 import { viewerClient } from "./lib/client";
+import { canRequestWakeLock, getBurnInOffset, isKioskEnabled } from "./lib/kiosk";
 
 const emptyBindings = [] as DashboardProject["bindings"];
 const emptyActions = [] as DashboardProject["actions"];
 
 type WakeLockSentinel = {
   release(): Promise<void>;
+  addEventListener?(type: "release", listener: () => void): void;
 };
 
 export function ViewerApp() {
@@ -31,7 +38,10 @@ export function ViewerApp() {
   const [online, setOnline] = useState(true);
   const [loadError, setLoadError] = useState<string | undefined>();
   const [burnInOffset, setBurnInOffset] = useState({ x: 0, y: 0 });
-  const [wakeLock, setWakeLock] = useState<WakeLockSentinel | undefined>();
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [viewerMessage, setViewerMessage] = useState<string | undefined>();
+  const wakeLockRef = useRef<WakeLockSentinel | undefined>(undefined);
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === "undefined" ? 1024 : window.innerWidth,
   );
@@ -42,6 +52,7 @@ export function ViewerApp() {
     : undefined;
   const activeThemeId = project?.settings.activeThemeId;
   const activeTheme = project?.themes.find((theme) => theme.themeId === activeThemeId);
+  const kiosk = isKioskEnabled(project, page);
   const components = useMemo(
     () =>
       project && page
@@ -99,7 +110,7 @@ export function ViewerApp() {
     viewerClient
       .loadDashboard()
       .then((dashboard) => {
-        setProject(dashboard);
+        setProject({ ...dashboard, themes: ensureThemePresets(dashboard.themes) });
         setActivePageId(dashboard.settings.activePageId || dashboard.pages[0]?.pageId);
         setOnline(true);
         setLoadError(undefined);
@@ -201,41 +212,113 @@ export function ViewerApp() {
 
   useEffect(() => {
     if (!project?.settings.burnInProtection) {
+      setBurnInOffset({ x: 0, y: 0 });
       return;
     }
-    const interval = window.setInterval(() => {
-      const step = Math.floor(Date.now() / 60000) % 5;
-      setBurnInOffset({ x: (step - 2) * 2, y: (((step + 1) % 5) - 2) * 2 });
-    }, 30000);
-    return () => window.clearInterval(interval);
+    let tick = Math.floor(Date.now() / 60000);
+    const move = () => {
+      if (document.visibilityState === "visible") {
+        setBurnInOffset(getBurnInOffset(tick));
+        tick += 1;
+      }
+    };
+    move();
+    const interval = window.setInterval(move, 60000);
+    document.addEventListener("visibilitychange", move);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", move);
+    };
   }, [project?.settings.burnInProtection]);
 
-  async function requestWakeLock() {
+  const releaseWakeLock = useCallback(async () => {
+    const sentinel = wakeLockRef.current;
+    wakeLockRef.current = undefined;
+    setWakeLockActive(false);
+    if (sentinel) {
+      try {
+        await sentinel.release();
+      } catch {
+        // A browser can release the sentinel independently while hidden.
+      }
+    }
+  }, []);
+
+  const requestWakeLock = useCallback(async () => {
     const navigatorWithWakeLock = navigator as Navigator & {
       wakeLock?: { request(type: "screen"): Promise<WakeLockSentinel> };
     };
-    if (!navigatorWithWakeLock.wakeLock) {
+    if (
+      !canRequestWakeLock(
+        Boolean(project?.settings.wakeLock),
+        document.visibilityState === "visible",
+        Boolean(navigatorWithWakeLock.wakeLock),
+      ) ||
+      wakeLockRef.current
+    ) {
       return;
     }
-    const sentinel = await navigatorWithWakeLock.wakeLock.request("screen");
-    setWakeLock(sentinel);
-  }
+    try {
+      const sentinel = await navigatorWithWakeLock.wakeLock!.request("screen");
+      wakeLockRef.current = sentinel;
+      setWakeLockActive(true);
+      sentinel.addEventListener?.("release", () => {
+        if (wakeLockRef.current === sentinel) {
+          wakeLockRef.current = undefined;
+          setWakeLockActive(false);
+        }
+      });
+    } catch {
+      setWakeLockActive(false);
+    }
+  }, [project?.settings.wakeLock]);
 
-  async function enterFullscreen() {
-    if (!document.fullscreenElement) {
-      await document.documentElement.requestFullscreen();
-      await requestWakeLock();
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void requestWakeLock();
+      } else {
+        void releaseWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    void requestWakeLock();
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      void releaseWakeLock();
+    };
+  }, [releaseWakeLock, requestWakeLock]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    onFullscreenChange();
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+        await requestWakeLock();
+      }
+      setViewerMessage(undefined);
+    } catch {
+      setViewerMessage("Fullscreen is unavailable in this browser");
     }
   }
 
   async function reload() {
     try {
       const dashboard = await viewerClient.loadDashboard();
-      setProject(dashboard);
+      const nextDashboard = { ...dashboard, themes: ensureThemePresets(dashboard.themes) };
+      setProject(nextDashboard);
       setActivePageId((current) =>
-        current && dashboard.pages.some((candidate) => candidate.pageId === current)
+        current && nextDashboard.pages.some((candidate) => candidate.pageId === current)
           ? current
-          : dashboard.settings.activePageId || dashboard.pages[0]?.pageId,
+          : nextDashboard.settings.activePageId || nextDashboard.pages[0]?.pageId,
       );
       setOnline(true);
       setLoadError(undefined);
@@ -245,19 +328,10 @@ export function ViewerApp() {
     }
   }
 
-  useEffect(
-    () => () => {
-      void wakeLock?.release();
-    },
-    [wakeLock],
-  );
-
   return (
     <div
-      className={`viewer-app theme-${activeTheme?.themeId ?? "modern-dark"}`}
-      style={{
-        transform: `translate(${burnInOffset.x}px, ${burnInOffset.y}px)`,
-      }}
+      className={`viewer-app theme-mode-${activeTheme?.mode ?? "dark"} ${kiosk ? "is-kiosk" : ""}`}
+      style={activeTheme ? (themeCssVariables(activeTheme) as CSSProperties) : undefined}
     >
       <header className="viewer-top">
         <div>
@@ -268,8 +342,15 @@ export function ViewerApp() {
           <button title="Reload" onClick={() => void reload()}>
             <RotateCcw size={18} aria-hidden="true" />
           </button>
-          <button title="Fullscreen" onClick={() => void enterFullscreen()}>
-            <Expand size={18} aria-hidden="true" />
+          <button
+            title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            onClick={() => void toggleFullscreen()}
+          >
+            {fullscreen ? (
+              <Minimize size={18} aria-hidden="true" />
+            ) : (
+              <Expand size={18} aria-hidden="true" />
+            )}
           </button>
         </nav>
       </header>
@@ -277,6 +358,11 @@ export function ViewerApp() {
       {!online ? (
         <div className="connection-hint" role="status">
           Reconnecting - showing last known values
+        </div>
+      ) : null}
+      {viewerMessage ? (
+        <div className="viewer-message" role="status">
+          {viewerMessage}
         </div>
       ) : null}
       {!project ? (
@@ -320,6 +406,8 @@ export function ViewerApp() {
             gridTemplateColumns: `repeat(${columns}, ${cell}px)`,
             minHeight: gridHeight,
             width: columns * cell,
+            transform: `translate(${burnInOffset.x}px, ${burnInOffset.y}px)`,
+            opacity: project.settings.burnInProtection ? 0.99 : 1,
           }}
         >
           {visibleComponents.map((component) => {
@@ -353,6 +441,7 @@ export function ViewerApp() {
           })}
         </main>
       ) : null}
+      {wakeLockActive ? <span className="viewer-wake-lock" aria-label="Wake Lock active" /> : null}
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   Redo2,
   RotateCw,
   Save,
+  Settings2,
   Smartphone,
   Sun,
   Tablet,
@@ -21,13 +22,15 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   applyPageTemplate,
   collectMissingStateIds,
+  ensureThemePresets,
   importDashboardProject,
   markMissingStates,
   remapDashboardStates,
+  themeCssVariables,
   upgradeStarterTemplates,
   validateDashboardProject,
   type DashboardProject,
@@ -45,6 +48,7 @@ import { Canvas } from "./components/Canvas";
 import { Inspector } from "./components/Inspector";
 import { LibraryPanel } from "./components/LibraryPanel";
 import { Palette } from "./components/Palette";
+import { ProjectSettingsPanel } from "./components/ProjectSettingsPanel";
 import { StatePicker } from "./components/StatePicker";
 import { isEditorHidden, isEditorLocked } from "./lib/componentEditorState";
 import { dashboardClient } from "./lib/client";
@@ -84,11 +88,13 @@ export function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
   const [missingStateIds, setMissingStateIds] = useState<string[]>([]);
   const [availableStateIds, setAvailableStateIds] = useState<string[]>([]);
   const [stateMapping, setStateMapping] = useState<Record<string, string>>({});
   const [diagnostics, setDiagnostics] = useState<DiagnosticEntry[]>(() => getDiagnostics());
   const activeThemeId = project.settings.activeThemeId;
+  const activeTheme = project.themes.find((theme) => theme.themeId === activeThemeId);
   const selectedComponents = project.components.filter((component) =>
     selectedIds.includes(component.componentId),
   );
@@ -103,7 +109,15 @@ export function App() {
   useEffect(() => {
     dashboardClient
       .loadDashboard()
-      .then((dashboard) => setProject(upgradeStarterTemplates(dashboard), "Loaded"))
+      .then((dashboard) =>
+        setProject(
+          upgradeStarterTemplates({
+            ...dashboard,
+            themes: ensureThemePresets(dashboard.themes),
+          }),
+          "Loaded",
+        ),
+      )
       .catch((error) => setStatus(`Load failed: ${readErrorMessage(error)}`));
   }, [setProject, setStatus]);
 
@@ -320,19 +334,27 @@ export function App() {
   }
 
   function toggleTheme() {
+    const index = project.themes.findIndex((theme) => theme.themeId === activeThemeId);
+    const nextTheme = project.themes[(index + 1) % project.themes.length];
+    if (!nextTheme) {
+      return;
+    }
     const nextProject: DashboardProject = {
       ...project,
       settings: {
         ...project.settings,
-        activeThemeId: activeThemeId === "modern-dark" ? "clean-light" : "modern-dark",
+        activeThemeId: nextTheme.themeId,
       },
       updatedAt: new Date().toISOString(),
     };
-    setProject(nextProject, "Theme changed");
+    replaceProject(nextProject, "Theme changed");
   }
 
   return (
-    <div className={`editor-app theme-${activeThemeId}`}>
+    <div
+      className={`editor-app theme-mode-${activeTheme?.mode ?? "dark"}`}
+      style={activeTheme ? (themeCssVariables(activeTheme) as CSSProperties) : undefined}
+    >
       <header className="topbar">
         <div className="brand">
           <img src="./dashboard-ng.svg" alt="" />
@@ -354,6 +376,13 @@ export function App() {
             onClick={() => setDiagnosticsOpen((open) => !open)}
           >
             <Bug size={17} aria-hidden="true" />
+          </button>
+          <button
+            className={projectSettingsOpen ? "toolbar-icon-active" : ""}
+            title="Project settings"
+            onClick={() => setProjectSettingsOpen((open) => !open)}
+          >
+            <Settings2 size={17} aria-hidden="true" />
           </button>
           <button title="Import" onClick={() => fileInputRef.current?.click()}>
             <Upload size={17} aria-hidden="true" />
@@ -464,6 +493,16 @@ export function App() {
           }
           onStatus={setStatus}
           onClose={() => setLibraryOpen(false)}
+        />
+      ) : null}
+
+      {projectSettingsOpen ? (
+        <ProjectSettingsPanel
+          project={project}
+          onChange={(next, nextStatus) =>
+            replaceProject({ ...next, updatedAt: new Date().toISOString() }, nextStatus)
+          }
+          onClose={() => setProjectSettingsOpen(false)}
         />
       ) : null}
 

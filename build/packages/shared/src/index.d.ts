@@ -9,3 +9,4 @@ export * from "./schema/migrations";
 export * from "./schema/types";
 export * from "./schema/validation";
 export * from "./themes/presets";
+export * from "./themes/tokens";
