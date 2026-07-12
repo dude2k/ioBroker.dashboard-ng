@@ -102,6 +102,7 @@ interface EditorState {
     placement: GridPlacement,
     breakpoint?: DashboardBreakpoint,
   ): void;
+  clearComponentLayout(componentId: string, breakpoint: DashboardBreakpoint): void;
   setComponentBinding(
     componentId: string,
     target: string,
@@ -541,9 +542,25 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
     const targetBreakpoint = breakpoint ?? state.preview;
-    component.layout[targetBreakpoint] = placement;
+    component.layout[targetBreakpoint] = clampGridPlacement(
+      placement,
+      component.parentId ? 12 : getPreviewColumns(targetBreakpoint),
+    );
     nextProject.updatedAt = new Date().toISOString();
     commit(set, state, nextProject, state.selectedIds, "Layout updated");
+  },
+
+  clearComponentLayout(componentId, breakpoint) {
+    const state = get();
+    const nextProject = cloneProject(state.project);
+    const component = nextProject.components.find((item) => item.componentId === componentId);
+    if (!component?.layout[breakpoint] || Object.keys(component.layout).length <= 1) {
+      set({ status: "Keep at least one layout value" });
+      return;
+    }
+    delete component.layout[breakpoint];
+    nextProject.updatedAt = new Date().toISOString();
+    commit(set, state, nextProject, state.selectedIds, "Breakpoint override cleared");
   },
 
   setComponentBinding(componentId, target, stateId, mode) {

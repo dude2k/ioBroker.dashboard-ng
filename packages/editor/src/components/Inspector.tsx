@@ -1,5 +1,5 @@
-import { CopyPlus, Eye, EyeOff, Lock, Plus, Trash2 } from "lucide-react";
-import type { ChangeEvent } from "react";
+import { CopyPlus, Eye, EyeOff, Grid2X2, Lock, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { useState, type ChangeEvent } from "react";
 import {
   canSetComponentParent,
   detectDeviceMapping,
@@ -11,6 +11,9 @@ import {
   type BindingMode,
   type BindingTransform,
   type ComponentType,
+  type DashboardBreakpoint,
+  type DashboardComponent,
+  type GridPlacement,
   type Page,
   type StatePrimitive,
   type StateOption,
@@ -18,12 +21,18 @@ import {
 } from "@dashboard-ng/shared";
 import {
   getConditionalStyleRule,
+  runtimeColumns,
   type ConditionalStyleOperator,
   type ConditionalStyleRule,
   type ConditionalStyleTone,
 } from "@dashboard-ng/runtime";
 import { isEditorHidden } from "../lib/componentEditorState";
-import { getComponentBinding, useEditorStore, type VisibilityOperator } from "../store/editorStore";
+import {
+  getComponentBinding,
+  getPlacement,
+  useEditorStore,
+  type VisibilityOperator,
+} from "../store/editorStore";
 import { getBindingTargets, type InspectorBindingTarget } from "./bindingFields";
 import {
   formatInspectorValue,
@@ -64,6 +73,10 @@ export function Inspector() {
     (state) => state.setComponentConditionalStyle,
   );
   const setComponentParent = useEditorStore((state) => state.setComponentParent);
+  const moveComponent = useEditorStore((state) => state.moveComponent);
+  const clearComponentLayout = useEditorStore((state) => state.clearComponentLayout);
+  const preview = useEditorStore((state) => state.preview);
+  const setPreview = useEditorStore((state) => state.setPreview);
   const duplicateSelected = useEditorStore((state) => state.duplicateSelected);
   const toggleSelectedLock = useEditorStore((state) => state.toggleSelectedLock);
   const toggleSelectedHidden = useEditorStore((state) => state.toggleSelectedHidden);
@@ -162,6 +175,18 @@ export function Inspector() {
           />
           <span className="field-label">Advanced mode</span>
         </label>
+
+        {project.settings.advancedMode ? (
+          <LayoutOverrideControl
+            component={component}
+            initialBreakpoint={preview}
+            onChange={(breakpoint, placement) =>
+              moveComponent(component.componentId, placement, breakpoint)
+            }
+            onClear={(breakpoint) => clearComponentLayout(component.componentId, breakpoint)}
+            onSelectBreakpoint={setPreview}
+          />
+        ) : null}
 
         {getInspectorFields(component.type).map((field) => (
           <InspectorFieldControl
@@ -399,6 +424,135 @@ export function Inspector() {
         </button>
       </div>
     </aside>
+  );
+}
+
+const layoutBreakpoints: DashboardBreakpoint[] = ["phone", "tablet", "desktop", "wall"];
+
+function LayoutOverrideControl({
+  component,
+  initialBreakpoint,
+  onChange,
+  onClear,
+  onSelectBreakpoint,
+}: {
+  component: DashboardComponent;
+  initialBreakpoint: DashboardBreakpoint;
+  onChange(breakpoint: DashboardBreakpoint, placement: GridPlacement): void;
+  onClear(breakpoint: DashboardBreakpoint): void;
+  onSelectBreakpoint(breakpoint: DashboardBreakpoint): void;
+}) {
+  const [breakpoint, setBreakpoint] = useState(initialBreakpoint);
+  const explicit = component.layout[breakpoint];
+  const placement = getPlacement(component, breakpoint);
+  const columns = component.parentId ? 12 : runtimeColumns[breakpoint];
+
+  function selectBreakpoint(next: DashboardBreakpoint) {
+    setBreakpoint(next);
+    onSelectBreakpoint(next);
+  }
+
+  function update(field: keyof GridPlacement, value: number) {
+    const next = { ...placement, [field]: Math.round(value) };
+    next.w = Math.max(1, Math.min(columns, next.w));
+    next.x = Math.max(0, Math.min(columns - next.w, next.x));
+    next.y = Math.max(0, next.y);
+    next.h = Math.max(1, next.h);
+    onChange(breakpoint, next);
+  }
+
+  return (
+    <section className="layout-override-control">
+      <div className="section-title">
+        <span>
+          <Grid2X2 size={14} aria-hidden="true" />
+          Layout
+        </span>
+        <span className={explicit ? "layout-source is-explicit" : "layout-source"}>
+          {explicit ? "Override" : "Inherited"}
+        </span>
+      </div>
+      <div className="layout-breakpoint-tabs" aria-label="Layout breakpoint">
+        {layoutBreakpoints.map((item) => (
+          <button
+            className={breakpoint === item ? "is-active" : ""}
+            key={item}
+            type="button"
+            onClick={() => selectBreakpoint(item)}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+      <div className="layout-number-grid">
+        <LayoutNumber
+          label="X"
+          value={placement.x}
+          min={0}
+          max={Math.max(0, columns - placement.w)}
+          onChange={(value) => update("x", value)}
+        />
+        <LayoutNumber
+          label="Y"
+          value={placement.y}
+          min={0}
+          max={999}
+          onChange={(value) => update("y", value)}
+        />
+        <LayoutNumber
+          label="W"
+          value={placement.w}
+          min={1}
+          max={columns - placement.x}
+          onChange={(value) => update("w", value)}
+        />
+        <LayoutNumber
+          label="H"
+          value={placement.h}
+          min={1}
+          max={100}
+          onChange={(value) => update("h", value)}
+        />
+      </div>
+      <div className="layout-override-footer">
+        <span>{columns} columns</span>
+        <button
+          disabled={!explicit || Object.keys(component.layout).length <= 1}
+          title="Reset breakpoint override"
+          type="button"
+          onClick={() => onClear(breakpoint)}
+        >
+          <RotateCcw size={14} aria-hidden="true" />
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function LayoutNumber({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange(value: number): void;
+}) {
+  return (
+    <label className="layout-number">
+      <span>{label}</span>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </label>
   );
 }
 

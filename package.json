@@ -44,11 +44,12 @@
     "dev:viewer": "vite --config vite.viewer.config.ts --host 127.0.0.1",
     "test": "vitest run",
     "test:package": "mocha test/package --exit",
-    "test:integration": "mocha test/integration --exit",
+    "test:integration": "mocha test/integration.js --exit",
     "lint": "eslint . && tsc -p tsconfig.adapter.json --noEmit && tsc -p tsconfig.frontend.json --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "adapter:check": "npx @iobroker/repochecker dude2k/ioBroker.dashboard-ng"
+    "adapter:check": "npx @iobroker/repochecker dude2k/ioBroker.dashboard-ng",
+    "release:check": "npm run format:check && npm run lint && npm test && npm run build && npm run test:package && npm run test:integration && npm run adapter:check"
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.4.1",

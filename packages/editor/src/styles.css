@@ -742,6 +742,113 @@ button.toolbar-icon-active {
   background: var(--panel-strong);
 }
 
+.layout-override-control {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-medium);
+  background: var(--panel-strong);
+}
+
+.layout-override-control .section-title,
+.layout-override-control .section-title > span:first-child,
+.layout-override-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.layout-source {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.layout-source.is-explicit {
+  color: var(--accent);
+}
+
+.layout-breakpoint-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--radius-small);
+  background: var(--panel);
+}
+
+.layout-breakpoint-tabs button {
+  min-width: 0;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 4px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+
+.layout-breakpoint-tabs button.is-active {
+  color: var(--text);
+  background: var(--panel-strong);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.layout-number-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.layout-number {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.layout-number input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 4px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-small);
+  color: var(--text);
+  background: var(--panel);
+  text-align: center;
+}
+
+.layout-override-footer {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.layout-override-footer button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-small);
+  color: var(--muted);
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.layout-override-footer button:hover {
+  color: var(--accent);
+}
+.layout-override-footer button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .binding-transform,
 .action-condition,
 .action-else-branch {

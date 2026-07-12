@@ -53,11 +53,12 @@ Completed work packages:
 - AP11: schema v2, complete MVP entity validation, additive migration history,
   pre-write backups and automatic restore on migration persistence failure.
 - AP17: schema-v3 Sections, Containers and nested component editing.
+- AP18: precise Advanced Mode layout values and per-breakpoint overrides.
 - AP19: lightweight multi-selection alignment and distribution tools.
-
-Deferred from the original Work Package 3 scope into later MVP work:
-
-- Exact layout values and breakpoint overrides inside Advanced Mode.
+- AP20: automated release gate covering format, lint, unit, build, package,
+  integration and adapter checks.
+- AP21: English and German user guides plus product and roadmap documentation
+  alignment.
 
 ## Post-MVP
 
@@ -65,7 +66,6 @@ Deferred from the original Work Package 3 scope into later MVP work:
 - Mini Chart history abstraction.
 - Camera asset and snapshot source management.
 - Better device mapping heuristics.
-- More responsive layout overrides in Advanced Mode.
 
 ## Later Possible Features
 

@@ -187,7 +187,7 @@ Acceptance criteria:
 
 Goal: turn the Editor foundation into a usable dashboard builder.
 
-Status: AP17 and AP19 completed on 2026-07-12; precise AP18 breakpoint controls remain.
+Status: AP17, AP18 and AP19 completed on 2026-07-12.
 
 Tasks:
 
@@ -543,6 +543,15 @@ Tasks:
 - Update `docs/ARCHITECTURE.md` whenever architecture changes.
 - Update `docs/DASHBOARD_SCHEMA.md` whenever schema changes.
 - Update `docs/ROADMAP.md` when a work package is completed or moved.
+
+Status: completed 2026-07-12.
+
+Implementation notes:
+
+- Added the English [User Guide](USER_GUIDE.md) and German
+  [Benutzerhandbuch](BENUTZERHANDBUCH.md).
+- Linked both guides from the README and aligned product and roadmap documents
+  with Sections, layout overrides, themes, templates, assets and release checks.
 - Add ADRs for major technical decisions, especially new large dependencies.
 - Keep `AGENTS.md` aligned with durable project rules.
 
@@ -583,6 +592,15 @@ Use small commits with focused subjects, for example:
 - `Document MVP completion status`
 
 ## Final Verification Checklist
+
+AP20 automated release gate completed on 2026-07-12. Run the combined gate:
+
+```bash
+npm run release:check
+```
+
+The manual real-install checklist remains mandatory on a machine with an
+ioBroker CLI before publishing a stable release.
 
 Run these checks before calling the rest implementation complete:
 
