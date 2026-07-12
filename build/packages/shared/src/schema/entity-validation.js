@@ -56,6 +56,7 @@ function validateComponent(value, path, issues) {
     }
     requireStringArray(component.bindingIds, `${path}.bindingIds`, issues);
     requireStringArray(component.actionIds, `${path}.actionIds`, issues);
+    optionalString(component, "parentId", path, issues);
     const visibility = requireShape(component.visibility, `${path}.visibility`, { kind: "string" }, issues);
     if (visibility && !["always", "binding", "formula"].includes(String(visibility.kind))) {
         addIssue(`${path}.visibility.kind`, "Unsupported visibility kind.", issues);

@@ -14,12 +14,13 @@ interface PointerDeltaInput {
   currentClientX: number;
   currentClientY: number;
   cell: number;
+  cellY?: number;
 }
 
 export function getPointerGridDelta(input: PointerDeltaInput): GridDelta {
   return {
     x: Math.round((input.currentClientX - input.startClientX) / input.cell),
-    y: Math.round((input.currentClientY - input.startClientY) / input.cell),
+    y: Math.round((input.currentClientY - input.startClientY) / (input.cellY ?? input.cell)),
   };
 }
 

@@ -1,6 +1,6 @@
-export declare const CURRENT_SCHEMA_VERSION = 2;
+export declare const CURRENT_SCHEMA_VERSION = 3;
 export type DashboardBreakpoint = "phone" | "tablet" | "desktop" | "wall";
-export type ComponentType = "room-card" | "light-card" | "thermostat-card" | "blind-card" | "sensor-card" | "scene-button" | "energy-card" | "mini-chart-card" | "camera-card" | "text" | "container" | "button" | "value-display";
+export type ComponentType = "room-card" | "light-card" | "thermostat-card" | "blind-card" | "sensor-card" | "scene-button" | "energy-card" | "mini-chart-card" | "camera-card" | "section" | "text" | "container" | "button" | "value-display";
 export type BindingKind = "state" | "formula";
 export type BindingMode = "read" | "write" | "readwrite";
 export type ActionTrigger = "tap" | "longPress" | "swipe";
@@ -42,6 +42,7 @@ export interface DashboardComponent {
     componentId: string;
     type: ComponentType;
     pageId: string;
+    parentId?: string;
     name: string;
     props: Record<string, unknown>;
     style: Record<string, unknown>;

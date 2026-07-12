@@ -5,6 +5,7 @@ import type {
   StatePrimitive,
   StateSnapshot,
 } from "@dashboard-ng/shared";
+import type { ReactNode } from "react";
 
 export type RuntimeMode = "editor" | "viewer";
 
@@ -33,6 +34,7 @@ export interface DashboardRuntimeCardProps {
   stateValues?: RuntimeStateValues;
   mode?: RuntimeMode;
   disabled?: boolean;
+  children?: ReactNode;
   onWriteState?(stateId: string, value: StatePrimitive): Promise<void> | void;
   onLocalStateChange?(stateId: string, value: StatePrimitive): void;
   onNavigate?(pageId: string): void;

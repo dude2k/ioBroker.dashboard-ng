@@ -33,6 +33,7 @@ interface CardContext extends Required<Pick<DashboardRuntimeCardProps, "componen
   disabled: boolean;
   pending: boolean;
   error: string | undefined;
+  children: ReactNode;
   runAction(trigger: ActionTrigger, event?: MouseEvent | PointerEvent): Promise<void>;
 }
 
@@ -49,6 +50,7 @@ export function DashboardRuntimeCard(props: DashboardRuntimeCardProps) {
     disabled: Boolean(props.disabled),
     pending,
     error,
+    children: props.children,
     runAction: async (trigger, event) => {
       event?.stopPropagation();
       if (props.disabled || pending) {
@@ -104,6 +106,8 @@ function renderCard(context: CardContext) {
     case "text":
       return <TextCard context={context} />;
     case "container":
+      return <ContainerCard context={context} />;
+    case "section":
       return <ContainerCard context={context} />;
     case "button":
       return <ButtonCard context={context} />;
@@ -316,9 +320,15 @@ function TextCard({ context }: { context: CardContext }) {
 }
 
 function ContainerCard({ context }: { context: CardContext }) {
+  const section = context.component.type === "section";
   return (
     <CardShell context={context} tone="neutral">
-      <CardTop icon="Box" title={cardTitle(context)} subtitle={propString(context, "subtitle")} />
+      <CardTop
+        icon={section ? "LayoutPanelTop" : "Box"}
+        title={cardTitle(context)}
+        subtitle={propString(context, "subtitle")}
+      />
+      {context.children}
     </CardShell>
   );
 }
@@ -396,7 +406,8 @@ function CardShell({
   ]
     .filter(Boolean)
     .join(" ");
-  const className = `dng-runtime-card tone-${tone} mode-${context.mode} ${stateClass}`.trim();
+  const className =
+    `dng-runtime-card type-${context.component.type} tone-${tone} mode-${context.mode} ${stateClass}`.trim();
   const backgroundImage = context.component.style.backgroundImage;
   const assetStyle =
     typeof backgroundImage === "string" && /^(data:image\/|https?:\/\/)/i.test(backgroundImage)
@@ -415,7 +426,7 @@ function CardShell({
     </>
   );
 
-  if (interactive || context.actions.length > 0) {
+  if ((interactive || context.actions.length > 0) && !context.children) {
     const clearLongPress = () => {
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);

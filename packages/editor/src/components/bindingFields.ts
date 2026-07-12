@@ -138,6 +138,7 @@ export const bindingTargetsByType: Record<ComponentType, InspectorBindingTarget[
       modes: readModes,
     },
   ],
+  section: [],
   container: [],
   button: [
     {

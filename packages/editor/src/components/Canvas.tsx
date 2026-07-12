@@ -1,5 +1,11 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
+  AlignCenterHorizontal,
+  AlignCenterVertical,
+  AlignEndHorizontal,
+  AlignEndVertical,
+  AlignStartHorizontal,
+  AlignStartVertical,
   Copy,
   EyeOff,
   Grip,
@@ -10,6 +16,8 @@ import {
   Pencil,
   Plus,
   Trash2,
+  BetweenHorizontalStart,
+  BetweenVerticalStart,
 } from "lucide-react";
 import type { DashboardComponent, GridPlacement } from "@dashboard-ng/shared";
 import {
@@ -50,6 +58,8 @@ export function Canvas() {
   const addComponent = useEditorStore((state) => state.addComponent);
   const endPaletteDrag = useEditorStore((state) => state.endPaletteDrag);
   const moveComponent = useEditorStore((state) => state.moveComponent);
+  const alignSelected = useEditorStore((state) => state.alignSelected);
+  const distributeSelected = useEditorStore((state) => state.distributeSelected);
   const switchPage = useEditorStore((state) => state.switchPage);
   const createPage = useEditorStore((state) => state.createPage);
   const renamePage = useEditorStore((state) => state.renamePage);
@@ -66,12 +76,119 @@ export function Canvas() {
   }
 
   const components = project.components.filter((component) => component.pageId === page.pageId);
+  const rootComponents = components.filter((component) => !component.parentId);
   const contentBottom = Math.max(
-    getGridBottom(components, preview),
+    getGridBottom(rootComponents, preview),
     dropPreview ? dropPreview.y + dropPreview.h : 0,
     layoutDraft ? layoutDraft.placement.y + layoutDraft.placement.h : 0,
   );
   const height = Math.max(viewport.height, (contentBottom + 2) * cell);
+
+  function renderComponent(component: DashboardComponent, nested = false): ReactNode {
+    const targetColumns = nested ? 12 : columns;
+    const storedPlacement = clampGridPlacement(
+      resolveComponentPlacement(component, preview),
+      targetColumns,
+    );
+    const activeDraft =
+      layoutDraft?.componentId === component.componentId ? layoutDraft : undefined;
+    const placement = activeDraft?.placement ?? storedPlacement;
+    const binding = getComponentBinding(project, component);
+    const bindings = project.bindings.filter((item) => item.componentId === component.componentId);
+    const locked = isEditorLocked(component);
+    const hidden = isEditorHidden(component);
+    const conditionHidden = !isComponentVisible(component, bindings, stateValues);
+    const childComponents = components.filter(
+      (candidate) => candidate.parentId === component.componentId,
+    );
+    const canContain = component.type === "container" || component.type === "section";
+    const nestedContent = canContain ? (
+      <div
+        className={`dng-runtime-nested-grid editor-nested-grid ${childComponents.length ? "" : "is-empty"}`}
+        data-parent-id={component.componentId}
+        onDragOver={(event) => {
+          const type = dragComponentType ?? readComponentDragType(event.dataTransfer);
+          if (!type) return;
+          event.preventDefault();
+          event.stopPropagation();
+          event.dataTransfer.dropEffect = "copy";
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const type = readComponentDragType(event.dataTransfer) ?? dragComponentType;
+          if (!type) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const nestedCell = Math.max(28, rect.width / 12);
+          const nestedPlacement = getCatalogDropPlacement(type, {
+            clientX: event.clientX,
+            clientY: event.clientY,
+            rect,
+            cell: nestedCell,
+            columns: 12,
+          });
+          addComponent(type, nestedPlacement, component.componentId);
+          setDropPreview(undefined);
+          endPaletteDrag();
+        }}
+      >
+        {childComponents.map((child) => renderComponent(child, true))}
+      </div>
+    ) : undefined;
+
+    return (
+      <ComponentTile
+        actions={project.actions.filter((item) => item.componentId === component.componentId)}
+        bindingMissing={Boolean(binding?.missing)}
+        bindings={bindings}
+        component={component}
+        conditionHidden={conditionHidden}
+        isHidden={hidden}
+        isLocked={locked}
+        isMoving={activeDraft?.kind === "move"}
+        isNested={nested}
+        isResizing={activeDraft?.kind === "resize"}
+        isSelected={selectedIds.includes(component.componentId)}
+        key={component.componentId}
+        onSelect={(additive) => selectComponent(component.componentId, additive)}
+        onStartMove={(event) => {
+          if (locked) return;
+          selectComponent(component.componentId, event.shiftKey || event.ctrlKey || event.metaKey);
+          startLayoutInteraction(event, {
+            columns: targetColumns,
+            componentId: component.componentId,
+            kind: "move",
+            cell: nested ? nestedGridColumnWidth(event.currentTarget) : cell,
+            cellY: nested ? 32 : cell,
+            startPlacement: storedPlacement,
+            setLayoutDraft,
+            commitPlacement: (nextPlacement) =>
+              moveComponent(component.componentId, nextPlacement, preview),
+          });
+        }}
+        onStartResize={(event, handle) => {
+          if (locked) return;
+          selectComponent(component.componentId, event.shiftKey || event.ctrlKey || event.metaKey);
+          startLayoutInteraction(event, {
+            columns: targetColumns,
+            componentId: component.componentId,
+            kind: "resize",
+            resizeHandle: handle,
+            cell: nested ? nestedGridColumnWidth(event.currentTarget) : cell,
+            cellY: nested ? 32 : cell,
+            startPlacement: storedPlacement,
+            setLayoutDraft,
+            commitPlacement: (nextPlacement) =>
+              moveComponent(component.componentId, nextPlacement, preview),
+          });
+        }}
+        placement={placement}
+        stateValues={stateValues}
+      >
+        {nestedContent}
+      </ComponentTile>
+    );
+  }
 
   return (
     <main className={`canvas-shell preview-${preview} preview-${previewOrientation}`}>
@@ -121,6 +238,50 @@ export function Canvas() {
           </button>
         </div>
       </div>
+      {selectedIds.length > 1 ? (
+        <div className="alignment-toolbar" aria-label="Align selected components">
+          <span>{selectedIds.length} selected</span>
+          <button title="Align left" onClick={() => alignSelected("left", preview, columns)}>
+            <AlignStartVertical size={15} />
+          </button>
+          <button
+            title="Align horizontal centers"
+            onClick={() => alignSelected("center", preview, columns)}
+          >
+            <AlignCenterVertical size={15} />
+          </button>
+          <button title="Align right" onClick={() => alignSelected("right", preview, columns)}>
+            <AlignEndVertical size={15} />
+          </button>
+          <button title="Align top" onClick={() => alignSelected("top", preview, columns)}>
+            <AlignStartHorizontal size={15} />
+          </button>
+          <button
+            title="Align vertical centers"
+            onClick={() => alignSelected("middle", preview, columns)}
+          >
+            <AlignCenterHorizontal size={15} />
+          </button>
+          <button title="Align bottom" onClick={() => alignSelected("bottom", preview, columns)}>
+            <AlignEndHorizontal size={15} />
+          </button>
+          <span className="toolbar-separator" />
+          <button
+            disabled={selectedIds.length < 3}
+            title="Distribute horizontally"
+            onClick={() => distributeSelected("horizontal", preview, columns)}
+          >
+            <BetweenHorizontalStart size={15} />
+          </button>
+          <button
+            disabled={selectedIds.length < 3}
+            title="Distribute vertically"
+            onClick={() => distributeSelected("vertical", preview, columns)}
+          >
+            <BetweenVerticalStart size={15} />
+          </button>
+        </div>
+      ) : null}
       <div
         className={`dashboard-canvas ${dropPreview ? "is-drag-target" : ""}`}
         aria-label={viewport.label}
@@ -189,79 +350,7 @@ export function Canvas() {
             }}
           />
         ) : null}
-        {components.map((component) => {
-          const storedPlacement = clampGridPlacement(
-            resolveComponentPlacement(component, preview),
-            columns,
-          );
-          const activeDraft =
-            layoutDraft?.componentId === component.componentId ? layoutDraft : undefined;
-          const placement = activeDraft?.placement ?? storedPlacement;
-          const binding = getComponentBinding(project, component);
-          const bindings = project.bindings.filter(
-            (item) => item.componentId === component.componentId,
-          );
-          const locked = isEditorLocked(component);
-          const hidden = isEditorHidden(component);
-          const conditionHidden = !isComponentVisible(component, bindings, stateValues);
-          return (
-            <ComponentTile
-              bindingMissing={Boolean(binding?.missing)}
-              bindings={bindings}
-              component={component}
-              actions={project.actions.filter((item) => item.componentId === component.componentId)}
-              conditionHidden={conditionHidden}
-              isHidden={hidden}
-              isLocked={locked}
-              isMoving={activeDraft?.kind === "move"}
-              isResizing={activeDraft?.kind === "resize"}
-              isSelected={selectedIds.includes(component.componentId)}
-              key={component.componentId}
-              onSelect={(additive) => selectComponent(component.componentId, additive)}
-              onStartMove={(event) => {
-                if (locked) {
-                  return;
-                }
-                selectComponent(
-                  component.componentId,
-                  event.shiftKey || event.ctrlKey || event.metaKey,
-                );
-                startLayoutInteraction(event, {
-                  columns,
-                  componentId: component.componentId,
-                  kind: "move",
-                  cell,
-                  startPlacement: storedPlacement,
-                  setLayoutDraft,
-                  commitPlacement: (nextPlacement) =>
-                    moveComponent(component.componentId, nextPlacement, preview),
-                });
-              }}
-              onStartResize={(event, handle) => {
-                if (locked) {
-                  return;
-                }
-                selectComponent(
-                  component.componentId,
-                  event.shiftKey || event.ctrlKey || event.metaKey,
-                );
-                startLayoutInteraction(event, {
-                  columns,
-                  componentId: component.componentId,
-                  kind: "resize",
-                  resizeHandle: handle,
-                  cell,
-                  startPlacement: storedPlacement,
-                  setLayoutDraft,
-                  commitPlacement: (nextPlacement) =>
-                    moveComponent(component.componentId, nextPlacement, preview),
-                });
-              }}
-              placement={placement}
-              stateValues={stateValues}
-            />
-          );
-        })}
+        {rootComponents.map((component) => renderComponent(component))}
       </div>
     </main>
   );
@@ -276,6 +365,7 @@ interface ComponentTileProps {
   conditionHidden: boolean;
   isMoving: boolean;
   isResizing: boolean;
+  isNested: boolean;
   bindingMissing: boolean;
   bindings: ReturnType<typeof useEditorStore.getState>["project"]["bindings"];
   actions: ReturnType<typeof useEditorStore.getState>["project"]["actions"];
@@ -283,6 +373,7 @@ interface ComponentTileProps {
   onSelect(additive: boolean): void;
   onStartMove(event: React.PointerEvent<HTMLButtonElement>): void;
   onStartResize(event: React.PointerEvent<HTMLButtonElement>, handle: ResizeHandle): void;
+  children?: ReactNode;
 }
 
 function ComponentTile({
@@ -294,6 +385,7 @@ function ComponentTile({
   conditionHidden,
   isMoving,
   isResizing,
+  isNested,
   bindingMissing,
   bindings,
   actions,
@@ -301,11 +393,12 @@ function ComponentTile({
   onSelect,
   onStartMove,
   onStartResize,
+  children,
 }: ComponentTileProps) {
   const setStateValues = useEditorStore((state) => state.setStateValues);
   return (
     <div
-      className={`component-tile ${isSelected ? "is-selected" : ""} ${isLocked ? "is-locked" : ""} ${isHidden ? "is-editor-hidden" : ""} ${conditionHidden ? "is-condition-hidden" : ""} ${isMoving ? "is-moving" : ""} ${isResizing ? "is-resizing" : ""} ${bindingMissing ? "has-missing" : ""}`}
+      className={`component-tile ${isNested ? "is-nested" : ""} ${isSelected ? "is-selected" : ""} ${isLocked ? "is-locked" : ""} ${isHidden ? "is-editor-hidden" : ""} ${conditionHidden ? "is-condition-hidden" : ""} ${isMoving ? "is-moving" : ""} ${isResizing ? "is-resizing" : ""} ${bindingMissing ? "has-missing" : ""}`}
       style={{
         gridColumn: `${placement.x + 1} / span ${placement.w}`,
         gridRow: `${placement.y + 1} / span ${placement.h}`,
@@ -342,7 +435,9 @@ function ComponentTile({
         onWriteState={async (stateId, value) => {
           await dashboardClient.writeState(stateId, value);
         }}
-      />
+      >
+        {children}
+      </DashboardRuntimeCard>
       {isLocked || isHidden || conditionHidden ? (
         <div className="tile-state-badges" aria-hidden="true">
           {isLocked ? <Lock size={12} /> : null}
@@ -397,6 +492,7 @@ interface LayoutInteractionOptions {
   resizeHandle?: ResizeHandle | undefined;
   startPlacement: GridPlacement;
   cell: number;
+  cellY?: number;
   columns: number;
   setLayoutDraft(draft: LayoutDraft | undefined): void;
   commitPlacement(placement: GridPlacement): void;
@@ -430,6 +526,7 @@ function startLayoutInteraction(
       currentClientX,
       currentClientY,
       cell: options.cell,
+      ...(options.cellY ? { cellY: options.cellY } : {}),
     });
 
     if (options.kind === "resize" && options.resizeHandle) {
@@ -463,4 +560,9 @@ function startLayoutInteraction(
 
   window.addEventListener("pointermove", onMove);
   window.addEventListener("pointerup", onUp, { once: true });
+}
+
+function nestedGridColumnWidth(element: HTMLElement): number {
+  const grid = element.closest<HTMLElement>(".editor-nested-grid");
+  return grid ? Math.max(1, grid.getBoundingClientRect().width / 12) : 32;
 }

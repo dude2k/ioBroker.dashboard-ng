@@ -1,4 +1,4 @@
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export type DashboardBreakpoint = "phone" | "tablet" | "desktop" | "wall";
 export type ComponentType =
@@ -11,6 +11,7 @@ export type ComponentType =
   | "energy-card"
   | "mini-chart-card"
   | "camera-card"
+  | "section"
   | "text"
   | "container"
   | "button"
@@ -64,6 +65,7 @@ export interface DashboardComponent {
   componentId: string;
   type: ComponentType;
   pageId: string;
+  parentId?: string;
   name: string;
   props: Record<string, unknown>;
   style: Record<string, unknown>;

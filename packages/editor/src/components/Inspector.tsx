@@ -1,7 +1,9 @@
 import { CopyPlus, Eye, EyeOff, Lock, Plus, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
 import {
+  canSetComponentParent,
   detectDeviceMapping,
+  isLayoutContainer,
   type ActionCondition,
   type ActionStep,
   type ActionTrigger,
@@ -61,6 +63,7 @@ export function Inspector() {
   const setComponentConditionalStyle = useEditorStore(
     (state) => state.setComponentConditionalStyle,
   );
+  const setComponentParent = useEditorStore((state) => state.setComponentParent);
   const duplicateSelected = useEditorStore((state) => state.duplicateSelected);
   const toggleSelectedLock = useEditorStore((state) => state.toggleSelectedLock);
   const toggleSelectedHidden = useEditorStore((state) => state.toggleSelectedHidden);
@@ -118,6 +121,12 @@ export function Inspector() {
   const componentActions = project.actions.filter(
     (action) => action.componentId === component.componentId,
   );
+  const containerOptions = project.components.filter(
+    (candidate) =>
+      candidate.pageId === component.pageId &&
+      isLayoutContainer(candidate) &&
+      canSetComponentParent(project.components, component.componentId, candidate.componentId),
+  );
 
   return (
     <aside className="inspector" aria-label="Inspector">
@@ -127,6 +136,23 @@ export function Inspector() {
           <span>{component.type}</span>
           <code>{component.componentId}</code>
         </div>
+
+        <label className="field">
+          <span className="field-label">Parent container</span>
+          <select
+            value={component.parentId ?? ""}
+            onChange={(event) =>
+              setComponentParent(component.componentId, event.target.value || undefined)
+            }
+          >
+            <option value="">Page root</option>
+            {containerOptions.map((container) => (
+              <option key={container.componentId} value={container.componentId}>
+                {container.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <label className="field checkbox-field advanced-mode-toggle">
           <input

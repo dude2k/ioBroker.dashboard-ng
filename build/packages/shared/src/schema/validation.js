@@ -120,6 +120,30 @@ function validateReferences(project, issues) {
                 severity: "error",
             });
         }
+        if (component.parentId) {
+            const parent = project.components.find((candidate) => candidate.componentId === component.parentId);
+            if (!parent) {
+                issues.push({
+                    path: `$.components[${componentIndex}].parentId`,
+                    message: `Missing parent component ${component.parentId}.`,
+                    severity: "error",
+                });
+            }
+            else if (parent.pageId !== component.pageId) {
+                issues.push({
+                    path: `$.components[${componentIndex}].parentId`,
+                    message: "Parent and child components must be on the same page.",
+                    severity: "error",
+                });
+            }
+            else if (parent.type !== "container" && parent.type !== "section") {
+                issues.push({
+                    path: `$.components[${componentIndex}].parentId`,
+                    message: "Parent component must be a container or section.",
+                    severity: "error",
+                });
+            }
+        }
         component.bindingIds.forEach((bindingId, bindingIndex) => {
             if (!bindingIds.has(bindingId)) {
                 issues.push({
@@ -138,6 +162,22 @@ function validateReferences(project, issues) {
                 });
             }
         });
+    });
+    project.components.forEach((component, componentIndex) => {
+        const visited = new Set([component.componentId]);
+        let parentId = component.parentId;
+        while (parentId) {
+            if (visited.has(parentId)) {
+                issues.push({
+                    path: `$.components[${componentIndex}].parentId`,
+                    message: "Nested component hierarchy contains a cycle.",
+                    severity: "error",
+                });
+                break;
+            }
+            visited.add(parentId);
+            parentId = project.components.find((candidate) => candidate.componentId === parentId)?.parentId;
+        }
     });
     project.bindings.forEach((binding, bindingIndex) => {
         if (!componentIds.has(binding.componentId)) {
