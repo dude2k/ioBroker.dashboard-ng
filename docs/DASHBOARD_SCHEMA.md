@@ -35,6 +35,7 @@ climate.
 Important fields:
 
 - `pageId`
+- `parentId` (optional; references a Section or Container on the same page)
 - `name`
 - `icon`
 - `order`
@@ -87,6 +88,12 @@ MVP runtime component types:
 - `energy-card`
 - `mini-chart-card`
 - `camera-card`
+- `section`
+- `container`
+
+Nested children keep their normal responsive placements, interpreted relative
+to a twelve-column grid inside the parent. Parent references cannot cross pages
+or form cycles.
 
 ## Binding
 
@@ -182,7 +189,8 @@ Templates cannot contain executable code.
 
 Runtime settings include kiosk, burn-in protection, Wake Lock, Advanced Mode
 and `reconnectIntervalMs`. Schema v2 requires reconnect intervals between 500
-and 60000 milliseconds; v1 dashboards migrate to the 2500 ms default.
+and 60000 milliseconds; v1 dashboards migrate to the 2500 ms default. Schema
+v3 adds optional nested component parent relationships.
 
 ## Migrations
 

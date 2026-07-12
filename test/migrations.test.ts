@@ -28,7 +28,7 @@ describe("dashboard migrations", () => {
     expect(result.project.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.project.projectId).toBe("legacy");
     expect(result.project.name).toBe("Legacy Dashboard");
-    expect(result.project.migrationHistory.map((entry) => entry.toVersion)).toEqual([1, 2]);
+    expect(result.project.migrationHistory.map((entry) => entry.toVersion)).toEqual([1, 2, 3]);
     expect(validateDashboardProject(result.project).valid).toBe(true);
   });
 
@@ -48,7 +48,23 @@ describe("dashboard migrations", () => {
     expect(result.backup).toEqual(v1);
     expect(result.project.components[0]!.props.title).toBe("Preserved user title");
     expect(result.project.settings.reconnectIntervalMs).toBe(2500);
-    expect(result.project.migrationHistory.at(-1)).toMatchObject({ fromVersion: 1, toVersion: 2 });
+    expect(result.project.migrationHistory).toContainEqual(
+      expect.objectContaining({ fromVersion: 1, toVersion: 2 }),
+    );
+    expect(result.project.migrationHistory.at(-1)).toMatchObject({ fromVersion: 2, toVersion: 3 });
+  });
+
+  it("migrates schema v2 without changing component data", () => {
+    const v2 = structuredClone(createDefaultDashboard()) as unknown as Record<string, unknown>;
+    v2.schemaVersion = 2;
+    const components = v2.components as Array<Record<string, unknown>>;
+    components[0]!.props = { title: "Preserved in v3" };
+
+    const result = migrateDashboardProject(v2, { now: "2026-07-12T00:00:00.000Z" });
+
+    expect(result.project.components[0]!.props.title).toBe("Preserved in v3");
+    expect(result.project.schemaVersion).toBe(3);
+    expect(result.project.migrationHistory.at(-1)).toMatchObject({ fromVersion: 2, toVersion: 3 });
   });
 
   it("does not mutate input when migration validation fails", () => {

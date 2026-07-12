@@ -86,6 +86,7 @@ function validateComponent(value: unknown, path: string, issues: ValidationIssue
   }
   requireStringArray(component.bindingIds, `${path}.bindingIds`, issues);
   requireStringArray(component.actionIds, `${path}.actionIds`, issues);
+  optionalString(component, "parentId", path, issues);
   const visibility = requireShape(
     component.visibility,
     `${path}.visibility`,

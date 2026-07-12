@@ -19,6 +19,19 @@ describe("editor layout interaction", () => {
     ).toEqual({ x: 2, y: -1 });
   });
 
+  it("supports different nested grid column and row sizes", () => {
+    expect(
+      getPointerGridDelta({
+        startClientX: 100,
+        startClientY: 100,
+        currentClientX: 190,
+        currentClientY: 164,
+        cell: 45,
+        cellY: 32,
+      }),
+    ).toEqual({ x: 2, y: 2 });
+  });
+
   it("moves placements and clamps them to the active grid", () => {
     expect(moveGridPlacement({ x: 10, y: 2, w: 3, h: 2 }, { x: 2, y: -4 }, 12)).toEqual({
       x: 9,

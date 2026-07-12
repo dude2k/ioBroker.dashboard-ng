@@ -77,10 +77,11 @@ export function ViewerApp() {
         ),
       )
     : [];
+  const rootComponents = visibleComponents.filter((component) => !component.parentId);
   const breakpoint = resolveRuntimeBreakpoint(viewportWidth);
   const columns = runtimeColumns[breakpoint];
   const cell = runtimeCellSize[breakpoint];
-  const gridBottom = getGridBottom(visibleComponents, breakpoint);
+  const gridBottom = getGridBottom(rootComponents, breakpoint);
   const gridHeight = Math.max(cell * 8, (gridBottom + 1) * cell);
 
   const stateIds = useMemo(
@@ -328,6 +329,46 @@ export function ViewerApp() {
     }
   }
 
+  function renderComponent(component: DashboardProject["components"][number], nested = false) {
+    const targetColumns = nested ? 12 : columns;
+    const placement = clampGridPlacement(
+      resolveComponentPlacement(component, breakpoint),
+      targetColumns,
+    );
+    const bindings = bindingsByComponentId.get(component.componentId) ?? emptyBindings;
+    const actions = actionsByComponentId.get(component.componentId) ?? emptyActions;
+    const children = visibleComponents.filter(
+      (candidate) => candidate.parentId === component.componentId,
+    );
+    return (
+      <section
+        className={nested ? "dng-runtime-nested-item" : "viewer-tile"}
+        key={component.componentId}
+        style={{
+          gridColumn: `${placement.x + 1} / span ${placement.w}`,
+          gridRow: `${placement.y + 1} / span ${placement.h}`,
+        }}
+      >
+        <DashboardRuntimeCard
+          actions={actions}
+          bindings={bindings}
+          component={component}
+          mode="viewer"
+          stateValues={stateValues}
+          onLocalStateChange={handleLocalStateChange}
+          onNavigate={handleNavigate}
+          onWriteState={handleWriteState}
+        >
+          {children.length ? (
+            <div className="dng-runtime-nested-grid">
+              {children.map((child) => renderComponent(child, true))}
+            </div>
+          ) : undefined}
+        </DashboardRuntimeCard>
+      </section>
+    );
+  }
+
   return (
     <div
       className={`viewer-app theme-mode-${activeTheme?.mode ?? "dark"} ${kiosk ? "is-kiosk" : ""}`}
@@ -410,35 +451,7 @@ export function ViewerApp() {
             opacity: project.settings.burnInProtection ? 0.99 : 1,
           }}
         >
-          {visibleComponents.map((component) => {
-            const placement = clampGridPlacement(
-              resolveComponentPlacement(component, breakpoint),
-              columns,
-            );
-            const bindings = bindingsByComponentId.get(component.componentId) ?? emptyBindings;
-            const actions = actionsByComponentId.get(component.componentId) ?? emptyActions;
-            return (
-              <section
-                className="viewer-tile"
-                key={component.componentId}
-                style={{
-                  gridColumn: `${placement.x + 1} / span ${placement.w}`,
-                  gridRow: `${placement.y + 1} / span ${placement.h}`,
-                }}
-              >
-                <DashboardRuntimeCard
-                  actions={actions}
-                  bindings={bindings}
-                  component={component}
-                  mode="viewer"
-                  stateValues={stateValues}
-                  onLocalStateChange={handleLocalStateChange}
-                  onNavigate={handleNavigate}
-                  onWriteState={handleWriteState}
-                />
-              </section>
-            );
-          })}
+          {rootComponents.map((component) => renderComponent(component))}
         </main>
       ) : null}
       {wakeLockActive ? <span className="viewer-wake-lock" aria-label="Wake Lock active" /> : null}

@@ -65,6 +65,7 @@ export const inspectorFieldsByType: Record<ComponentType, InspectorField[]> = {
     subtitleField,
     { prop: "imageUrl", label: "Image URL", kind: "url", placeholder: "https://..." },
   ],
+  section: [titleField, subtitleField],
   text: [titleField, { prop: "text", label: "Text", kind: "text" }],
   container: [titleField, subtitleField],
   button: [titleField, subtitleField],

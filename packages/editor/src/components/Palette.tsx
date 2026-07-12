@@ -1,9 +1,11 @@
 import {
+  Box,
   Camera,
   ChartLine,
   Gauge,
   House,
   Lightbulb,
+  LayoutPanelTop,
   PanelTop,
   Sparkles,
   Thermometer,
@@ -14,11 +16,13 @@ import { createComponentDragPayload, DASHBOARD_COMPONENT_MIME } from "../lib/dra
 import { useEditorStore } from "../store/editorStore";
 
 const icons = {
+  Box,
   Camera,
   ChartLine,
   Gauge,
   House,
   Lightbulb,
+  LayoutPanelTop,
   PanelTop,
   Sparkles,
   Thermometer,

@@ -4,7 +4,7 @@ Modern responsive dashboards for ioBroker.
 
 ## Project Status
 
-**Dashboard-NG is not finished yet.** Version `0.6.0` is an installable alpha
+**Dashboard-NG is not finished yet.** Version `0.7.0` is an installable alpha
 baseline for early testing and development. The adapter can be installed from
 GitHub and an instance can run, but the complete MVP feature set from
 `docs/MVP_COMPLETION_TASK.md` is still in progress.
@@ -14,8 +14,8 @@ changes and possible breaking changes before a stable `1.0.0` release.
 
 ## Version
 
-- Current adapter version: `0.6.0`
-- Current GitHub tag: `v0.6.0`
+- Current adapter version: `0.7.0`
+- Current GitHub tag: `v0.7.0`
 - Release status: alpha / installable MVP foundation
 - Versioning scheme: SemVer-style package versions and Git tags named
   `vX.Y.Z`
@@ -27,6 +27,8 @@ JavaScript.
 ## Features
 
 - Responsive grid editor with snap-to-grid.
+- Nested sections and containers with hierarchy-aware editing.
+- Multi-selection alignment and distribution tools.
 - Separate lightweight Viewer for wall tablets and phones.
 - Dashboard save/load through ioBroker-compatible adapter storage.
 - Versioned JSON schema with migrations.
@@ -182,6 +184,16 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
 `/adapter/dashboard-ng/index.html` do not end in a 404.
 
 ## Changelog
+
+### 0.7.0 (2026-07-12)
+
+- Added first-class Section and Container components with nested twelve-column
+  child grids in Editor and Viewer.
+- Added safe hierarchy validation, recursive copy, duplicate, template and
+  delete behavior, plus an additive schema v2-to-v3 migration.
+- Added lightweight edge, center and distribution tools for multi-selection.
+- Added central theme controls, four curated presets and hardened kiosk,
+  fullscreen, Wake Lock and burn-in behavior.
 
 ### 0.6.0 (2026-07-11)
 
@@ -389,7 +401,7 @@ Dashboard-NG still ships a small admin redirect so old bookmarks to
   specialist controls remain planned for individual card types.
 - Device detection is heuristic and needs broader testing across real-world
   adapter ecosystems.
-- Asset upload is prepared in the schema but not fully implemented.
+- Real ioBroker installation coverage still needs expansion before `1.0.0`.
 - No plugin system, marketplace or VIS/VIS2 import.
 - No arbitrary JavaScript and no complex automation workflows.
 
@@ -400,7 +412,7 @@ Dashboards. Nutzer sollen ohne HTML, CSS oder JavaScript schoene Dashboards
 erstellen koennen. Der MVP konzentriert sich auf Editor, Viewer, Grid-Layout,
 State-Binding, sichere Formeln, Import/Export, Themes und stabile Migrationen.
 
-Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.6.0` ist eine
+Wichtig: Dieses Projekt ist noch nicht fertig. Version `0.7.0` ist eine
 installierbare Alpha-Grundlage fuer Tests und Weiterentwicklung, aber noch keine
 stabile Produktivversion.
 

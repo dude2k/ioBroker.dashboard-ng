@@ -918,6 +918,49 @@ button.toolbar-icon-active {
   opacity: 0.45;
 }
 
+.alignment-toolbar {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 auto 10px;
+  padding: 4px 6px;
+  overflow-x: auto;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-medium);
+  color: var(--muted);
+  background: var(--panel);
+  box-shadow: var(--card-shadow);
+}
+
+.alignment-toolbar > span:first-child {
+  padding: 0 7px;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.alignment-toolbar button {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-small);
+  color: var(--text);
+  background: var(--panel-strong);
+  cursor: pointer;
+}
+
+.alignment-toolbar button:hover {
+  color: var(--accent);
+}
+.alignment-toolbar button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .dashboard-canvas {
   display: grid;
   grid-auto-rows: var(--cell-size, 72px);
@@ -961,6 +1004,43 @@ button.toolbar-icon-active {
   padding: 6px;
   min-width: 0;
   min-height: 0;
+}
+
+.component-tile.is-nested {
+  padding: 2px;
+}
+
+.component-tile.is-nested > .dng-runtime-card,
+.component-tile.is-nested > .dng-runtime-container {
+  min-height: 0;
+}
+
+.component-tile.is-nested .dng-runtime-card {
+  padding: min(var(--card-padding), 9px);
+  gap: 5px;
+}
+
+.component-tile.is-nested .dng-runtime-value {
+  font-size: clamp(15px, 2vw, 22px);
+}
+
+.editor-nested-grid {
+  position: relative;
+  min-height: 54px;
+  border: 1px dashed color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: var(--radius-small);
+  background: color-mix(in srgb, var(--panel-strong) 55%, transparent);
+}
+
+.editor-nested-grid.is-empty::after {
+  content: "+";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 20px;
+  pointer-events: none;
 }
 
 .component-tile.is-moving,

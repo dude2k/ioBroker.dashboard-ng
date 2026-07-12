@@ -187,6 +187,8 @@ Acceptance criteria:
 
 Goal: turn the Editor foundation into a usable dashboard builder.
 
+Status: AP17 and AP19 completed on 2026-07-12; precise AP18 breakpoint controls remain.
+
 Tasks:
 
 - Implement real drag-and-drop from the palette to the canvas.

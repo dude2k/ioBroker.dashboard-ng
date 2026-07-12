@@ -52,13 +52,12 @@ Completed work packages:
   and styles.
 - AP11: schema v2, complete MVP entity validation, additive migration history,
   pre-write backups and automatic restore on migration persistence failure.
+- AP17: schema-v3 Sections, Containers and nested component editing.
+- AP19: lightweight multi-selection alignment and distribution tools.
 
 Deferred from the original Work Package 3 scope into later MVP work:
 
-- First-class section/container authoring UI.
-- Nested component editing where supported by the schema.
 - Exact layout values and breakpoint overrides inside Advanced Mode.
-- Optional lightweight alignment tools.
 
 ## Post-MVP
 
@@ -66,8 +65,6 @@ Deferred from the original Work Package 3 scope into later MVP work:
 - Mini Chart history abstraction.
 - Camera asset and snapshot source management.
 - Better device mapping heuristics.
-- Template library with one or two polished starter dashboards.
-- Asset upload and management.
 - More responsive layout overrides in Advanced Mode.
 
 ## Later Possible Features

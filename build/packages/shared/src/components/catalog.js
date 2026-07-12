@@ -5,6 +5,24 @@ exports.createComponentFromCatalog = createComponentFromCatalog;
 exports.getCatalogEntry = getCatalogEntry;
 exports.componentCatalog = [
     {
+        type: "section",
+        label: "Section",
+        description: "Group related dashboard components in a titled area.",
+        icon: "LayoutPanelTop",
+        defaultSize: { w: 8, h: 7 },
+        defaultProps: { title: "Section", subtitle: "" },
+        implemented: true,
+    },
+    {
+        type: "container",
+        label: "Container",
+        description: "Nest components in a reusable layout container.",
+        icon: "Box",
+        defaultSize: { w: 6, h: 6 },
+        defaultProps: { title: "Container", subtitle: "" },
+        implemented: true,
+    },
+    {
         type: "light-card",
         label: "Light",
         description: "Read and toggle a light state.",

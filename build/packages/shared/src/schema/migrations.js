@@ -39,6 +39,12 @@ function migrateDashboardProject(input, options = {}) {
             version = 2;
             continue;
         }
+        if (version === 2) {
+            working = migrate2To3(working, now);
+            migrated = true;
+            version = 3;
+            continue;
+        }
         throw new DashboardMigrationError(`No migration path from schema version ${version}.`);
     }
     const validation = (0, validation_1.validateDashboardProject)(working);
@@ -57,6 +63,7 @@ function migrate0To1(input, now) {
     const name = typeof record.name === "string" && record.name.trim() ? record.name : "My Home";
     const projectId = typeof record.projectId === "string" && record.projectId.trim() ? record.projectId : "default";
     const project = (0, defaults_1.createDefaultDashboard)({ name, projectId, now });
+    project.schemaVersion = 1;
     const entry = {
         fromVersion: 0,
         toVersion: 1,
@@ -94,6 +101,26 @@ function migrate1To2(input, now) {
                 toVersion: 2,
                 migratedAt: now,
                 note: "Added reconnect settings and full MVP entity validation.",
+            },
+        ],
+    };
+}
+function migrate2To3(input, now) {
+    if (!isRecord(input)) {
+        throw new DashboardMigrationError("Schema v2 dashboard must be an object.");
+    }
+    const history = Array.isArray(input.migrationHistory) ? input.migrationHistory : [];
+    return {
+        ...input,
+        schemaVersion: 3,
+        updatedAt: now,
+        migrationHistory: [
+            ...history,
+            {
+                fromVersion: 2,
+                toVersion: 3,
+                migratedAt: now,
+                note: "Added optional nested component parent relationships.",
             },
         ],
     };

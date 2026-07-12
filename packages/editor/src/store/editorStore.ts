@@ -2,6 +2,8 @@ import { create, type StoreApi } from "zustand";
 import {
   createComponentFromCatalog,
   createDefaultDashboard,
+  canSetComponentParent,
+  getDescendantIds,
   type DeviceMapping,
   getCatalogEntry,
   type ActionCondition,
@@ -21,6 +23,12 @@ import {
   type VisibilityRule,
 } from "@dashboard-ng/shared";
 import { clampGridPlacement, type ConditionalStyleRule } from "@dashboard-ng/runtime";
+import {
+  alignPlacements,
+  distributePlacements,
+  type AlignmentMode,
+  type DistributionAxis,
+} from "../lib/alignment";
 import {
   clearEditorInteractionFlags,
   isEditorHidden,
@@ -76,7 +84,14 @@ interface EditorState {
   deletePage(pageId: string): void;
   selectComponent(id: string, additive?: boolean): void;
   clearSelection(): void;
-  addComponent(type: ComponentType, placement?: GridPlacement): void;
+  addComponent(type: ComponentType, placement?: GridPlacement, parentId?: string): void;
+  setComponentParent(componentId: string, parentId: string | undefined): void;
+  alignSelected(mode: AlignmentMode, breakpoint: DashboardBreakpoint, columns: number): void;
+  distributeSelected(
+    axis: DistributionAxis,
+    breakpoint: DashboardBreakpoint,
+    columns: number,
+  ): void;
   duplicateSelected(): void;
   toggleSelectedLock(): void;
   toggleSelectedHidden(): void;
@@ -323,6 +338,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         sourceComponent?.actionIds
           .map((actionId) => actionIdMap.get(actionId))
           .filter((actionId): actionId is string => Boolean(actionId)) ?? [];
+      if (sourceComponent?.parentId) {
+        const parentId = componentIdMap.get(sourceComponent.parentId);
+        if (parentId) component.parentId = parentId;
+      }
     });
 
     const copiedPage: Page = {
@@ -412,7 +431,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ selectedIds: [] });
   },
 
-  addComponent(type, placement) {
+  addComponent(type, placement, parentId) {
     const state = get();
     const page = getActivePage(state.project);
     if (!page) {
@@ -421,13 +440,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const entry = getCatalogEntry(type);
     const componentId = createId("cmp");
+    const targetColumns = parentId ? 12 : getPreviewColumns(state.preview);
     const nextPlacement = placement ?? {
       x: 0,
-      y: nextComponentY(state.project, page.pageId),
-      w: entry.defaultSize.w,
+      y: nextComponentY(state.project, page.pageId, parentId, state.preview),
+      w: Math.min(entry.defaultSize.w, targetColumns),
       h: entry.defaultSize.h,
     };
     const component = createComponentFromCatalog(type, componentId, page.pageId, nextPlacement);
+    if (parentId && canSetComponentParent(state.project.components, componentId, parentId)) {
+      component.parentId = parentId;
+    } else if (parentId) {
+      const parent = state.project.components.find((item) => item.componentId === parentId);
+      if (
+        parent &&
+        parent.pageId === page.pageId &&
+        (parent.type === "container" || parent.type === "section")
+      ) {
+        component.parentId = parentId;
+      }
+    }
     const nextProject: DashboardProject = {
       ...cloneProject(state.project),
       updatedAt: new Date().toISOString(),
@@ -437,6 +469,55 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const nextPage = nextProject.pages.find((candidate) => candidate.pageId === page.pageId);
     nextPage?.componentIds.push(component.componentId);
     commit(set, state, nextProject, [component.componentId], "Component added");
+  },
+
+  setComponentParent(componentId, parentId) {
+    const state = get();
+    if (!canSetComponentParent(state.project.components, componentId, parentId)) {
+      set({ status: "Invalid container relationship" });
+      return;
+    }
+    const nextProject = cloneProject(state.project);
+    const component = nextProject.components.find((item) => item.componentId === componentId);
+    if (!component || component.parentId === parentId) {
+      return;
+    }
+    if (parentId) {
+      component.parentId = parentId;
+    } else {
+      delete component.parentId;
+    }
+    Object.entries(component.layout).forEach(([breakpoint, placement]) => {
+      if (!placement) return;
+      const targetBreakpoint = breakpoint as DashboardBreakpoint;
+      const columns = parentId ? 12 : getPreviewColumns(targetBreakpoint);
+      component.layout[targetBreakpoint] = {
+        ...placement,
+        x: 0,
+        y: nextComponentY(nextProject, component.pageId, parentId, targetBreakpoint),
+        w: Math.min(placement.w, columns),
+      };
+    });
+    nextProject.updatedAt = new Date().toISOString();
+    commit(
+      set,
+      state,
+      nextProject,
+      [componentId],
+      parentId ? "Moved into container" : "Moved to page",
+    );
+  },
+
+  alignSelected(mode, breakpoint, columns) {
+    updateSelectedPlacements(set, get(), breakpoint, columns, (items, targetColumns) =>
+      alignPlacements(items, mode, targetColumns),
+    );
+  },
+
+  distributeSelected(axis, breakpoint, columns) {
+    updateSelectedPlacements(set, get(), breakpoint, columns, (items, targetColumns) =>
+      distributePlacements(items, axis, targetColumns),
+    );
   },
 
   updateComponentProps(componentId, props) {
@@ -859,7 +940,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         .filter((component) => selected.has(component.componentId) && isEditorLocked(component))
         .map((component) => component.componentId),
     );
-    const deleteIds = new Set([...selected].filter((componentId) => !locked.has(componentId)));
+    const deleteIds = getDescendantIds(
+      state.project.components,
+      [...selected].filter((componentId) => !locked.has(componentId)),
+    );
     if (!deleteIds.size) {
       set({ status: "Selection locked" });
       return;
@@ -891,7 +975,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   copySelected() {
     const state = get();
-    const selected = new Set(state.selectedIds);
+    const selected = getDescendantIds(state.project.components, state.selectedIds);
     clipboard = {
       components: cloneJson(
         state.project.components.filter((component) => selected.has(component.componentId)),
@@ -940,7 +1024,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   duplicateSelected() {
     const state = get();
     const page = getActivePage(state.project);
-    const selected = new Set(state.selectedIds);
+    const selected = getDescendantIds(state.project.components, state.selectedIds);
     const selectedComponents = state.project.components.filter((component) =>
       selected.has(component.componentId),
     );
@@ -1152,6 +1236,7 @@ function createComponentCopies(input: ComponentCopyInput): ComponentCopyResult {
 
   const components = input.components.map((component) => {
     const nextComponent = cloneJson(component);
+    const sourcePageId = nextComponent.pageId;
     const nextComponentId = createId("cmp");
     componentIdMap.set(component.componentId, nextComponentId);
     nextComponent.componentId = nextComponentId;
@@ -1160,6 +1245,14 @@ function createComponentCopies(input: ComponentCopyInput): ComponentCopyResult {
     nextComponent.bindingIds = [];
     nextComponent.actionIds = [];
     nextComponent.style = clearEditorInteractionFlags(nextComponent.style);
+    if (nextComponent.parentId) {
+      const mappedParentId = componentIdMap.get(nextComponent.parentId);
+      if (mappedParentId) {
+        nextComponent.parentId = mappedParentId;
+      } else if (sourcePageId !== input.pageId) {
+        delete nextComponent.parentId;
+      }
+    }
     Object.values(nextComponent.layout).forEach((placement) => {
       placement.x += input.offset;
       placement.y += input.offset;
@@ -1201,6 +1294,10 @@ function createComponentCopies(input: ComponentCopyInput): ComponentCopyResult {
       sourceComponent?.actionIds
         .map((actionId) => actionIdMap.get(actionId))
         .filter((actionId): actionId is string => Boolean(actionId)) ?? [];
+    if (sourceComponent?.parentId) {
+      const mappedParentId = componentIdMap.get(sourceComponent.parentId);
+      if (mappedParentId) component.parentId = mappedParentId;
+    }
   });
 
   return { components, bindings, actions };
@@ -1416,14 +1513,66 @@ function uniqueIds(ids: string[]): string[] {
   return [...new Set(ids)];
 }
 
-function nextComponentY(project: DashboardProject, pageId: string): number {
+function nextComponentY(
+  project: DashboardProject,
+  pageId: string,
+  parentId?: string,
+  breakpoint: DashboardBreakpoint = "desktop",
+): number {
   return project.components.reduce((max, component) => {
-    if (component.pageId !== pageId) {
+    if (component.pageId !== pageId || component.parentId !== parentId) {
       return max;
     }
-    const placement = getPlacement(component, "desktop");
+    const placement = getPlacement(component, breakpoint);
     return Math.max(max, placement.y + placement.h);
   }, 0);
+}
+
+function getPreviewColumns(breakpoint: DashboardBreakpoint): number {
+  return { phone: 4, tablet: 8, desktop: 12, wall: 12 }[breakpoint];
+}
+
+function updateSelectedPlacements(
+  set: StoreApi<EditorState>["setState"],
+  state: EditorState,
+  breakpoint: DashboardBreakpoint,
+  columns: number,
+  update: (
+    items: Array<{ id: string; placement: GridPlacement }>,
+    targetColumns: number,
+  ) => Map<string, GridPlacement>,
+): void {
+  const selected = new Set(state.selectedIds);
+  const components = state.project.components.filter(
+    (component) => selected.has(component.componentId) && !isEditorLocked(component),
+  );
+  if (components.length < 2) {
+    set({ status: "Select at least two unlocked components" });
+    return;
+  }
+  const parentId = components[0]?.parentId;
+  if (components.some((component) => component.parentId !== parentId)) {
+    set({ status: "Align components inside the same container" });
+    return;
+  }
+  const placements = update(
+    components.map((component) => ({
+      id: component.componentId,
+      placement: getPlacement(component, breakpoint),
+    })),
+    parentId ? 12 : columns,
+  );
+  if (!placements.size) {
+    set({ status: "Select more components for this operation" });
+    return;
+  }
+  const nextProject = cloneProject(state.project);
+  nextProject.components.forEach((component) => {
+    const placement = placements.get(component.componentId);
+    if (placement) component.layout[breakpoint] = placement;
+  });
+  nextProject.updatedAt = new Date().toISOString();
+  commit(set, state, nextProject, state.selectedIds, "Selection aligned");
 }
 
 function nextPageOrder(project: DashboardProject): number {

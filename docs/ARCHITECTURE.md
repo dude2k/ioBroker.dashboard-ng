@@ -154,6 +154,12 @@ validation for every MVP entity. Storage writes the original dashboard to the
 backup directory before migration, verifies the migrated file after writing and
 restores the original JSON if writing or verification fails.
 
+Schema v3 adds optional component `parentId` relationships. Validation requires
+parents to be Sections or Containers on the same page and rejects hierarchy
+cycles. Editor and Viewer render child placements in a twelve-column nested
+grid, while copy, duplicate, template and delete operations preserve complete
+subtrees.
+
 ## Import/Export
 
 Exports are portable JSON bundles with dashboard data and metadata. Imports run

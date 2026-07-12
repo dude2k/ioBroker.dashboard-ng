@@ -129,13 +129,17 @@ export function applyPageTemplate(project: DashboardProject, template: Template)
     order: next.pages.length,
     componentIds: template.components.map((item) => componentMap.get(item.componentId)!),
   };
-  const components: DashboardComponent[] = template.components.map((item) => ({
-    ...clone(item),
-    componentId: componentMap.get(item.componentId)!,
-    pageId,
-    bindingIds: item.bindingIds.map((id) => bindingMap.get(id)).filter(isString),
-    actionIds: item.actionIds.map((id) => actionMap.get(id)).filter(isString),
-  }));
+  const components: DashboardComponent[] = template.components.map((item) => {
+    const parentId = item.parentId ? componentMap.get(item.parentId) : undefined;
+    return {
+      ...clone(item),
+      componentId: componentMap.get(item.componentId)!,
+      pageId,
+      ...(parentId ? { parentId } : {}),
+      bindingIds: item.bindingIds.map((id) => bindingMap.get(id)).filter(isString),
+      actionIds: item.actionIds.map((id) => actionMap.get(id)).filter(isString),
+    };
+  });
   const actions: DashboardAction[] = (template.actions ?? []).map((item) => ({
     ...clone(item),
     actionId: actionMap.get(item.actionId)!,
