@@ -7,11 +7,13 @@ import {
   Eye,
   EyeOff,
   Lock,
+  Library,
   Monitor,
   Moon,
   Redo2,
   RotateCw,
   Save,
+  Settings2,
   Smartphone,
   Sun,
   Tablet,
@@ -20,8 +22,20 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { validateDashboardProject, type DashboardProject } from "@dashboard-ng/shared";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  applyPageTemplate,
+  collectMissingStateIds,
+  ensureThemePresets,
+  importDashboardProject,
+  markMissingStates,
+  remapDashboardStates,
+  themeCssVariables,
+  upgradeStarterTemplates,
+  validateDashboardProject,
+  type DashboardProject,
+  type Template,
+} from "@dashboard-ng/shared";
 import {
   clearDiagnostics,
   collectPageStateIds,
@@ -32,7 +46,10 @@ import {
 } from "@dashboard-ng/runtime";
 import { Canvas } from "./components/Canvas";
 import { Inspector } from "./components/Inspector";
+import { LibraryPanel } from "./components/LibraryPanel";
 import { Palette } from "./components/Palette";
+import { ProjectSettingsPanel } from "./components/ProjectSettingsPanel";
+import { StatePicker } from "./components/StatePicker";
 import { isEditorHidden, isEditorLocked } from "./lib/componentEditorState";
 import { dashboardClient } from "./lib/client";
 import { getPreviewViewport } from "./lib/preview";
@@ -53,6 +70,7 @@ export function App() {
   const dirty = useEditorStore((state) => state.dirty);
   const status = useEditorStore((state) => state.status);
   const setProject = useEditorStore((state) => state.setProject);
+  const replaceProject = useEditorStore((state) => state.replaceProject);
   const setStatus = useEditorStore((state) => state.setStatus);
   const setPreview = useEditorStore((state) => state.setPreview);
   const togglePreviewOrientation = useEditorStore((state) => state.togglePreviewOrientation);
@@ -69,8 +87,14 @@ export function App() {
   const setStateValues = useEditorStore((state) => state.setStateValues);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
+  const [missingStateIds, setMissingStateIds] = useState<string[]>([]);
+  const [availableStateIds, setAvailableStateIds] = useState<string[]>([]);
+  const [stateMapping, setStateMapping] = useState<Record<string, string>>({});
   const [diagnostics, setDiagnostics] = useState<DiagnosticEntry[]>(() => getDiagnostics());
   const activeThemeId = project.settings.activeThemeId;
+  const activeTheme = project.themes.find((theme) => theme.themeId === activeThemeId);
   const selectedComponents = project.components.filter((component) =>
     selectedIds.includes(component.componentId),
   );
@@ -85,7 +109,15 @@ export function App() {
   useEffect(() => {
     dashboardClient
       .loadDashboard()
-      .then((dashboard) => setProject(dashboard, "Loaded"))
+      .then((dashboard) =>
+        setProject(
+          upgradeStarterTemplates({
+            ...dashboard,
+            themes: ensureThemePresets(dashboard.themes),
+          }),
+          "Loaded",
+        ),
+      )
       .catch((error) => setStatus(`Load failed: ${readErrorMessage(error)}`));
   }, [setProject, setStatus]);
 
@@ -246,9 +278,42 @@ export function App() {
     if (!file) {
       return;
     }
-    const text = await file.text();
-    const imported = JSON.parse(text) as DashboardProject;
-    setProject(imported, "Imported");
+    try {
+      const states = await dashboardClient.searchObjects("", 10000, true);
+      const stateIds = states.map((state) => state.id);
+      const result = importDashboardProject(JSON.parse(await file.text()), stateIds);
+      replaceProject(result.project, result.migrated ? "Imported and migrated" : "Imported");
+      openMissingStateMapping(result.missingStateIds, stateIds);
+    } catch (error) {
+      setStatus(`Import failed: ${readErrorMessage(error)}`);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function applyTemplate(template: Template) {
+    try {
+      const states = await dashboardClient.searchObjects("", 10000);
+      const stateIds = states.map((state) => state.id);
+      const next = markMissingStates(applyPageTemplate(project, template), stateIds);
+      replaceProject(next, `Template applied: ${template.name}`);
+      openMissingStateMapping(collectMissingStateIds(next, stateIds), stateIds);
+    } catch (error) {
+      setStatus(`Template failed: ${readErrorMessage(error)}`);
+    }
+  }
+
+  function openMissingStateMapping(missing: string[], available: string[]) {
+    setMissingStateIds(missing);
+    setAvailableStateIds(available);
+    setStateMapping({});
+  }
+
+  function applyStateMapping() {
+    const mapped = remapDashboardStates(project, stateMapping);
+    const next = markMissingStates(mapped, availableStateIds);
+    replaceProject(next, "Missing states remapped");
+    setMissingStateIds([]);
   }
 
   function copyDiagnostics() {
@@ -269,19 +334,27 @@ export function App() {
   }
 
   function toggleTheme() {
+    const index = project.themes.findIndex((theme) => theme.themeId === activeThemeId);
+    const nextTheme = project.themes[(index + 1) % project.themes.length];
+    if (!nextTheme) {
+      return;
+    }
     const nextProject: DashboardProject = {
       ...project,
       settings: {
         ...project.settings,
-        activeThemeId: activeThemeId === "modern-dark" ? "clean-light" : "modern-dark",
+        activeThemeId: nextTheme.themeId,
       },
       updatedAt: new Date().toISOString(),
     };
-    setProject(nextProject, "Theme changed");
+    replaceProject(nextProject, "Theme changed");
   }
 
   return (
-    <div className={`editor-app theme-${activeThemeId}`}>
+    <div
+      className={`editor-app theme-mode-${activeTheme?.mode ?? "dark"}`}
+      style={activeTheme ? (themeCssVariables(activeTheme) as CSSProperties) : undefined}
+    >
       <header className="topbar">
         <div className="brand">
           <img src="./dashboard-ng.svg" alt="" />
@@ -304,11 +377,25 @@ export function App() {
           >
             <Bug size={17} aria-hidden="true" />
           </button>
+          <button
+            className={projectSettingsOpen ? "toolbar-icon-active" : ""}
+            title="Project settings"
+            onClick={() => setProjectSettingsOpen((open) => !open)}
+          >
+            <Settings2 size={17} aria-hidden="true" />
+          </button>
           <button title="Import" onClick={() => fileInputRef.current?.click()}>
             <Upload size={17} aria-hidden="true" />
           </button>
           <button title="Export" onClick={exportDashboard}>
             <Download size={17} aria-hidden="true" />
+          </button>
+          <button
+            className={libraryOpen ? "toolbar-icon-active" : ""}
+            title="Templates and assets"
+            onClick={() => setLibraryOpen((open) => !open)}
+          >
+            <Library size={17} aria-hidden="true" />
           </button>
           <span className="toolbar-separator" />
           <button title="Undo" onClick={undo}>
@@ -396,12 +483,94 @@ export function App() {
         />
       ) : null}
 
+      {libraryOpen ? (
+        <LibraryPanel
+          project={project}
+          {...(selectedIds[0] ? { selectedComponentId: selectedIds[0] } : {})}
+          onApplyTemplate={(template) => void applyTemplate(template)}
+          onChange={(next, nextStatus) =>
+            replaceProject({ ...next, updatedAt: new Date().toISOString() }, nextStatus)
+          }
+          onStatus={setStatus}
+          onClose={() => setLibraryOpen(false)}
+        />
+      ) : null}
+
+      {projectSettingsOpen ? (
+        <ProjectSettingsPanel
+          project={project}
+          onChange={(next, nextStatus) =>
+            replaceProject({ ...next, updatedAt: new Date().toISOString() }, nextStatus)
+          }
+          onClose={() => setProjectSettingsOpen(false)}
+        />
+      ) : null}
+
+      {missingStateIds.length ? (
+        <MissingStatePanel
+          missingStateIds={missingStateIds}
+          mapping={stateMapping}
+          onChange={(stateId, replacement) =>
+            setStateMapping((current) => ({ ...current, [stateId]: replacement }))
+          }
+          onApply={applyStateMapping}
+          onClose={() => setMissingStateIds([])}
+        />
+      ) : null}
+
       <div className="workspace">
         <Palette onAdd={addComponent} />
         <Canvas />
         <Inspector />
       </div>
     </div>
+  );
+}
+
+function MissingStatePanel({
+  missingStateIds,
+  mapping,
+  onChange,
+  onApply,
+  onClose,
+}: {
+  missingStateIds: string[];
+  mapping: Record<string, string>;
+  onChange(stateId: string, replacement: string): void;
+  onApply(): void;
+  onClose(): void;
+}) {
+  const mappedCount = missingStateIds.filter((id) => mapping[id]).length;
+  return (
+    <section className="mapping-panel" aria-label="Missing state mapping">
+      <header className="library-header">
+        <div>
+          <strong>Missing states</strong>
+          <span>
+            {mappedCount} of {missingStateIds.length} mapped
+          </span>
+        </div>
+        <button title="Keep unresolved states" onClick={onClose}>
+          <X size={16} />
+        </button>
+      </header>
+      <div className="mapping-list">
+        {missingStateIds.map((stateId) => (
+          <div className="mapping-row" key={stateId}>
+            <code>{stateId}</code>
+            <StatePicker
+              label="Replacement"
+              value={mapping[stateId]}
+              access="any"
+              onSelect={(replacement) => onChange(stateId, replacement)}
+            />
+          </div>
+        ))}
+      </div>
+      <button className="primary-button" disabled={!mappedCount} onClick={onApply}>
+        Apply mappings
+      </button>
+    </section>
   );
 }
 

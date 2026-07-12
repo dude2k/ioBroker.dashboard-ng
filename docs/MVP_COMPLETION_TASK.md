@@ -361,6 +361,8 @@ Acceptance criteria:
 
 Goal: make dashboards portable and provide good starter designs.
 
+Status: completed on 2026-07-12.
+
 Tasks:
 
 - Keep dashboard export as portable JSON.
@@ -388,9 +390,20 @@ Acceptance criteria:
 - Missing states are visible and can be remapped.
 - Assets survive export/import according to the documented strategy.
 
+Implementation notes:
+
+- Uploaded image and SVG assets are embedded as Data URLs; explicit HTTP(S)
+  references remain external.
+- Dashboard imports migrate and validate before entering the editor, then mark
+  and optionally remap every referenced state.
+- Template files contain the full page/component/binding/action graph and use a
+  versioned `ioBroker.dashboard-ng/template` envelope.
+
 ## Work Package 9: Theme System And Design Controls
 
 Goal: let users customize the look while keeping polished defaults.
+
+Status: completed on 2026-07-12.
 
 Tasks:
 
@@ -418,9 +431,19 @@ Acceptance criteria:
 - Light and dark presets remain readable.
 - Component text fits on phone, tablet, desktop and wall layouts.
 
+Implementation notes:
+
+- The Editor exposes project-level controls for colors, spacing, radius,
+  typography, borders and card shadows.
+- Token variables are shared by the Editor canvas and Viewer runtime cards.
+- Modern Dark, Clean Light, Glass Panel and Minimal Wall Tablet are included as
+  curated presets and added to existing projects without replacing custom work.
+
 ## Work Package 10: Kiosk, Fullscreen, Wake Lock And Burn-In
 
 Goal: make Viewer operation reliable on wall tablets.
+
+Status: completed on 2026-07-12.
 
 Tasks:
 
@@ -442,6 +465,15 @@ Acceptance criteria:
 - Wake Lock does not throw visible errors on unsupported devices.
 - Burn-in protection can be enabled and disabled.
 - The dashboard remains readable during burn-in movement or dimming.
+
+Implementation notes:
+
+- Viewer controls support reload, fullscreen entry and fullscreen exit; kiosk
+  mode keeps those controls available on hover or keyboard focus.
+- Wake Lock requests are capability and visibility guarded, released while the
+  page is hidden, and retried after it becomes visible without surfacing errors.
+- Burn-in protection shifts only the dashboard grid through a bounded two-pixel
+  pattern once per minute.
 
 ## Work Package 11: Schema, Migrations And Storage Safety
 

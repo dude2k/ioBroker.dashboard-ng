@@ -159,6 +159,9 @@ Assets represent images, icons, backgrounds or future local media:
 - `storagePath`
 - `createdAt`
 
+Uploads use an image Data URL in `url`; explicit HTTP(S) references remain
+external. Both forms are preserved by ordinary dashboard JSON export/import.
+
 ## Template
 
 Templates are reusable JSON snippets:
@@ -168,6 +171,9 @@ Templates are reusable JSON snippets:
 - `kind`: page, section or componentGroup
 - `componentIds`
 - `page`
+- `components`
+- `bindings`
+- `actions`
 - `metadata`
 
 Templates cannot contain executable code.

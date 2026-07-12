@@ -180,6 +180,15 @@ function validateTemplate(value, path, issues) {
     if (template.page !== undefined) {
         validatePage(template.page, `${path}.page`, issues);
     }
+    if (template.components !== undefined) {
+        validateArray(template.components, `${path}.components`, issues, validateComponent);
+    }
+    if (template.bindings !== undefined) {
+        validateArray(template.bindings, `${path}.bindings`, issues, validateBinding);
+    }
+    if (template.actions !== undefined) {
+        validateArray(template.actions, `${path}.actions`, issues, validateAction);
+    }
 }
 function validateSettings(value, path, issues) {
     const settings = requireShape(value, path, {

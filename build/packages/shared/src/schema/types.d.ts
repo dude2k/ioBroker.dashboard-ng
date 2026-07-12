@@ -160,6 +160,9 @@ export interface Template {
     kind: "page" | "section" | "componentGroup";
     componentIds: string[];
     page?: Page;
+    components?: DashboardComponent[];
+    bindings?: Binding[];
+    actions?: DashboardAction[];
     metadata: Record<string, string>;
 }
 export interface ProjectSettings {

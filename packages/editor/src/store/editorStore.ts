@@ -61,6 +61,7 @@ interface EditorState {
   stateValues: Record<string, StatePrimitive>;
   dragComponentType: ComponentType | undefined;
   setProject(project: DashboardProject, status?: string): void;
+  replaceProject(project: DashboardProject, status?: string): void;
   setStatus(status: string): void;
   setPreview(preview: PreviewSize): void;
   setPreviewOrientation(orientation: PreviewOrientation): void;
@@ -158,6 +159,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       status,
       dragComponentType: undefined,
     });
+  },
+
+  replaceProject(project, status = "Project updated") {
+    const state = get();
+    commit(set, state, project, [], status);
   },
 
   setStatus(status) {
