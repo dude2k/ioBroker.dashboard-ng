@@ -130,7 +130,15 @@ borders and related visual defaults.
 ## Import And Export
 
 Export creates portable JSON data. Import runs migration and validation before
-saving. Future versions will add richer asset handling and missing-state mapping.
+saving. The Editor detects unavailable ioBroker states during import, keeps them
+visibly marked and offers an explicit remapping step. Pages can be saved,
+imported and exported as reusable templates; wall-panel and mobile starter
+templates are included.
+
+Uploaded images and SVG icons are embedded as Data URLs in the dashboard JSON,
+so they survive export and import without separate files. HTTP(S) asset
+references remain external and therefore require the referenced server to stay
+available.
 
 ## Kiosk Mode
 

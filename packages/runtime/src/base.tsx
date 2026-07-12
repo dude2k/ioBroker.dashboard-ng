@@ -1,13 +1,18 @@
-import type { MouseEventHandler, ReactNode } from "react";
+import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 import { RuntimeIcon } from "./icons";
 
 interface RuntimeContainerProps {
   children: ReactNode;
   className?: string | undefined;
+  style?: CSSProperties | undefined;
 }
 
-export function RuntimeContainer({ children, className = "" }: RuntimeContainerProps) {
-  return <div className={`dng-runtime-container ${className}`.trim()}>{children}</div>;
+export function RuntimeContainer({ children, className = "", style }: RuntimeContainerProps) {
+  return (
+    <div className={`dng-runtime-container ${className}`.trim()} style={style}>
+      {children}
+    </div>
+  );
 }
 
 interface RuntimeTextProps {

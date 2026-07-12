@@ -160,12 +160,17 @@ Exports are portable JSON bundles with dashboard data and metadata. Imports run
 through migration and validation, then save the dashboard. Missing states are
 detected by the state binding layer and marked in UI.
 
-Assets can later be embedded or referenced in the export format.
+Uploaded image assets are embedded as Data URLs in the project and therefore in
+dashboard exports. Explicit HTTP(S) references are stored unchanged and remain
+external. Template exports include the complete page, component, binding and
+action graph; asset URLs already applied to components travel with that graph.
 
 ## Asset Management
 
-MVP prepares assets as schema entities. Actual binary storage is planned in the
-adapter data area. External URLs must be validated and rendered conservatively.
+The Editor accepts image and SVG uploads, classifies them as image or icon
+assets, and can apply them as component images or backgrounds. External URLs
+are restricted to HTTP(S); runtime backgrounds accept only HTTP(S) and image
+Data URLs.
 
 ## Security Model
 

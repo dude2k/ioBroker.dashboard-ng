@@ -361,6 +361,8 @@ Acceptance criteria:
 
 Goal: make dashboards portable and provide good starter designs.
 
+Status: completed on 2026-07-12.
+
 Tasks:
 
 - Keep dashboard export as portable JSON.
@@ -387,6 +389,15 @@ Acceptance criteria:
 - Starter templates can be used without manual JSON editing.
 - Missing states are visible and can be remapped.
 - Assets survive export/import according to the documented strategy.
+
+Implementation notes:
+
+- Uploaded image and SVG assets are embedded as Data URLs; explicit HTTP(S)
+  references remain external.
+- Dashboard imports migrate and validate before entering the editor, then mark
+  and optionally remap every referenced state.
+- Template files contain the full page/component/binding/action graph and use a
+  versioned `ioBroker.dashboard-ng/template` envelope.
 
 ## Work Package 9: Theme System And Design Controls
 

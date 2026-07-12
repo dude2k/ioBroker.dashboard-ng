@@ -150,27 +150,88 @@ export function createDefaultDashboard(options: DefaultDashboardOptions = {}): D
   };
 }
 
-function createStarterTemplates(now: string): Template[] {
+export function createStarterTemplates(now = new Date().toISOString()): Template[] {
   return [
-    {
-      templateId: "tpl-wall-overview",
-      name: "Wall Overview",
-      kind: "page",
-      componentIds: [],
-      metadata: {
-        description: "Starter template for a wall tablet overview.",
-        createdAt: now,
-      },
-    },
-    {
-      templateId: "tpl-mobile-status",
-      name: "Mobile Status",
-      kind: "page",
-      componentIds: [],
-      metadata: {
-        description: "Starter template for compact mobile status views.",
-        createdAt: now,
-      },
-    },
+    createStarterTemplate(
+      "tpl-wall-overview",
+      "Wall Overview",
+      "Starter wall-panel overview with room, climate, light and energy controls.",
+      [
+        ["room-card", "Living room", { x: 0, y: 0, w: 4, h: 3 }],
+        ["thermostat-card", "Climate", { x: 4, y: 0, w: 3, h: 4 }],
+        ["light-card", "Main light", { x: 7, y: 0, w: 3, h: 3 }],
+        ["energy-card", "Power", { x: 0, y: 3, w: 4, h: 3 }],
+        ["scene-button", "Evening", { x: 7, y: 3, w: 3, h: 2 }],
+      ],
+      now,
+    ),
+    createStarterTemplate(
+      "tpl-mobile-status",
+      "Mobile Status",
+      "Compact mobile status page for climate, energy and a favorite scene.",
+      [
+        ["sensor-card", "Temperature", { x: 0, y: 0, w: 2, h: 2 }],
+        ["sensor-card", "Humidity", { x: 2, y: 0, w: 2, h: 2 }],
+        ["energy-card", "Power", { x: 0, y: 2, w: 4, h: 3 }],
+        ["scene-button", "Good night", { x: 0, y: 5, w: 4, h: 2 }],
+      ],
+      now,
+    ),
   ];
+}
+
+export function upgradeStarterTemplates(project: DashboardProject): DashboardProject {
+  const starters = new Map(
+    createStarterTemplates(project.createdAt).map((template) => [template.templateId, template]),
+  );
+  let changed = false;
+  const templates = project.templates.map((template) => {
+    const replacement = starters.get(template.templateId);
+    if (replacement && !template.components?.length) {
+      changed = true;
+      return replacement;
+    }
+    return template;
+  });
+  return changed ? { ...project, templates } : project;
+}
+
+type StarterComponent = [Parameters<typeof createComponentFromCatalog>[0], string, GridPlacement];
+
+function createStarterTemplate(
+  templateId: string,
+  name: string,
+  description: string,
+  entries: StarterComponent[],
+  now: string,
+): Template {
+  const pageId = `${templateId}-page`;
+  const components = entries.map(([type, title, placement], index) => {
+    const component = createComponentFromCatalog(
+      type,
+      `${templateId}-cmp-${index + 1}`,
+      pageId,
+      placement,
+    );
+    component.name = title;
+    component.props = { ...component.props, title };
+    return component;
+  });
+  return {
+    templateId,
+    name,
+    kind: "page",
+    componentIds: components.map((component) => component.componentId),
+    page: {
+      pageId,
+      name,
+      order: 0,
+      componentIds: components.map((component) => component.componentId),
+      settings: {},
+    },
+    components,
+    bindings: [],
+    actions: [],
+    metadata: { description, createdAt: now, starter: "true" },
+  };
 }

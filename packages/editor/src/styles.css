@@ -144,6 +144,161 @@ button.toolbar-icon-active {
   background: var(--panel-strong);
 }
 
+.library-panel,
+.mapping-panel {
+  position: absolute;
+  z-index: 30;
+  top: 66px;
+  right: 12px;
+  width: min(420px, calc(100vw - 24px));
+  max-height: calc(100vh - 78px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 32%);
+}
+
+.mapping-panel {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding-bottom: 12px;
+}
+
+.library-header,
+.library-tabs,
+.library-actions,
+.library-item,
+.library-item-actions,
+.asset-reference-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.library-header {
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.library-header > div {
+  display: grid;
+  gap: 2px;
+}
+.library-header span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.library-header button,
+.library-actions button,
+.library-item-actions button,
+.asset-reference-row button {
+  min-width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--panel-strong);
+  cursor: pointer;
+}
+
+.library-tabs {
+  padding: 8px 12px 0;
+}
+.library-tabs button {
+  flex: 1;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--muted);
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.library-tabs button.is-active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.library-content,
+.mapping-list {
+  overflow: auto;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+.library-actions {
+  justify-content: flex-end;
+}
+.library-item {
+  min-height: 64px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.library-item > div:not(.library-item-actions) {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 4px;
+}
+.library-item span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.library-item-actions {
+  margin-left: auto;
+}
+.library-item-actions button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.asset-item > img {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+.asset-reference-row input {
+  min-width: 0;
+  flex: 1;
+}
+.asset-reference-row input,
+.asset-reference-row select {
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 8px;
+  color: var(--text);
+  background: var(--panel-strong);
+}
+.mapping-row {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.mapping-row code {
+  color: var(--warn);
+  overflow-wrap: anywhere;
+}
+.mapping-panel > .primary-button {
+  margin: 0 12px;
+  min-height: 36px;
+}
+
 .diagnostics-panel {
   position: absolute;
   z-index: 20;

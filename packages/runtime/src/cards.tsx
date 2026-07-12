@@ -397,6 +397,15 @@ function CardShell({
     .filter(Boolean)
     .join(" ");
   const className = `dng-runtime-card tone-${tone} mode-${context.mode} ${stateClass}`.trim();
+  const backgroundImage = context.component.style.backgroundImage;
+  const assetStyle =
+    typeof backgroundImage === "string" && /^(data:image\/|https?:\/\/)/i.test(backgroundImage)
+      ? {
+          backgroundImage: `linear-gradient(rgb(0 0 0 / 28%), rgb(0 0 0 / 28%)), url(${JSON.stringify(backgroundImage)})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }
+      : undefined;
   const content = (
     <>
       {children}
@@ -417,6 +426,7 @@ function CardShell({
     return (
       <button
         className={className}
+        style={assetStyle}
         disabled={context.disabled}
         type="button"
         onPointerDown={(event) => {
@@ -471,7 +481,11 @@ function CardShell({
     );
   }
 
-  return <RuntimeContainer className={className}>{content}</RuntimeContainer>;
+  return (
+    <RuntimeContainer className={className} style={assetStyle}>
+      {content}
+    </RuntimeContainer>
+  );
 }
 
 function CardTop({
